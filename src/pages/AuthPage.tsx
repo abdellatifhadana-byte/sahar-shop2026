@@ -40,18 +40,45 @@ export default function AuthPage() {
   };
 
   return (
-    <div style={{
-          width: 110, height: 110, margin: '0 auto 16px', borderRadius: 24,
-          overflow: 'hidden', background: '#07080D',
-          boxShadow: '0 8px 32px rgba(255,77,26,.3), 0 0 0 1px rgba(255,255,255,.06)',
-        }}>
-          <img src="/sahar-logo-text.png" alt="SAHAR shop" style={{ width:'100%',height:'100%',objectFit:'contain' }}
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display='none'; }}
-          />
-        </div>
-          <h1 style={{ fontSize: 26, fontWeight: 900, color: 'var(--ink1)', marginBottom: 6, letterSpacing: '-.02em' }}><span style={{color:'var(--ember)'}}>SAHAR</span> shop</h1>
-          <p style={{ color: 'var(--ink3)', fontSize: 11, letterSpacing:'.12em', textTransform:'uppercase' }}>AI commerce OS</p>
-        </div>
+    <div style={{ textAlign: 'center', marginBottom: 20 }}>
+  <div style={{
+    width: 110,
+    height: 110,
+    margin: '0 auto 16px',
+    borderRadius: 24,
+    overflow: 'hidden',
+    background: '#07080D',
+    boxShadow: '0 8px 32px rgba(255,77,26,.3), 0 0 0 1px rgba(255,255,255,.06)',
+  }}>
+    <img
+      src="/sahar-logo-text.png"
+      alt="SAHAR shop"
+      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+      onError={(e) => {
+        (e.currentTarget as HTMLImageElement).style.display = 'none';
+      }}
+    />
+  </div>
+
+  <h1 style={{
+    fontSize: 26,
+    fontWeight: 900,
+    color: 'var(--ink1)',
+    marginBottom: 6,
+    letterSpacing: '-.02em'
+  }}>
+    <span style={{ color: 'var(--ember)' }}>SAHAR</span> shop
+  </h1>
+
+  <p style={{
+    color: 'var(--ink3)',
+    fontSize: 11,
+    letterSpacing: '.12em',
+    textTransform: 'uppercase'
+  }}>
+    AI commerce OS
+  </p>
+</div>
 
         <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 24, padding: 28, backdropFilter: 'blur(20px)', boxShadow: '0 24px 64px rgba(0,0,0,.4)' }}>
           {/* Tabs */}
