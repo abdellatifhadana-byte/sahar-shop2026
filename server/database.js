@@ -445,3 +445,11 @@ db.getUserById = function(id) {
 db.updateUserPassword = function(id, hashedPassword) {
   sqlite.prepare('UPDATE users SET password = ?, updatedAt = ? WHERE id = ?').run(hashedPassword, new Date().toISOString(), id);
 };
+
+db.findOrderByCode = function(userId, code) {
+  try {
+    return sqlite.prepare(
+      "SELECT * FROM orders WHERE userId = ? AND UPPER(customerCode) = UPPER(?)"
+    ).get(userId, (code || '').trim()) || null;
+  } catch { return null; }
+};
