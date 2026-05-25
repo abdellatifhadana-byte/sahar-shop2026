@@ -270,12 +270,13 @@ const db = {
     return o ? _parseOrder(o) : null;
   },
   createOrder(o) {
-    const order = { id: uid(), userId: o.userId, customerId: o.customerId||'', customerName: o.customerName, customerPhone: o.customerPhone||'', city: o.city||'', address: o.address||'', items: JSON.stringify(o.items||[]), total: +o.total||0, status: o.status||'pending', source: o.source||'manual', deliveryProvider: '', trackingNumber: '', notes: o.notes||'', needsReview: 0, reviewReason: '', createdAt: now() };
-    sqlite.prepare(`INSERT INTO orders (id,userId,customerId,customerName,customerPhone,city,address,items,total,status,source,deliveryProvider,trackingNumber,notes,needsReview,reviewReason,createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(order.id,order.userId,order.customerId,order.customerName,order.customerPhone,order.city,order.address,order.items,order.total,order.status,order.source,order.deliveryProvider,order.trackingNumber,order.notes,order.needsReview,order.reviewReason,order.createdAt);
+    const customerCode = o.customerCode || Math.random().toString(36).slice(2,8).toUpperCase();
+    const order = { id: uid(), userId: o.userId, customerId: o.customerId||'', customerName: o.customerName, customerPhone: o.customerPhone||'', city: o.city||'', address: o.address||'', items: JSON.stringify(o.items||[]), total: +o.total||0, status: o.status||'pending', source: o.source||'manual', deliveryProvider: '', trackingNumber: '', notes: o.notes||'', needsReview: 0, reviewReason: '', customerCode, createdAt: now() };
+    sqlite.prepare(`INSERT INTO orders (id,userId,customerId,customerName,customerPhone,city,address,items,total,status,source,deliveryProvider,trackingNumber,notes,needsReview,reviewReason,customerCode,createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(order.id,order.userId,order.customerId,order.customerName,order.customerPhone,order.city,order.address,order.items,order.total,order.status,order.source,order.deliveryProvider,order.trackingNumber,order.notes,order.needsReview,order.reviewReason,order.customerCode||'',order.createdAt);
     return _parseOrder(order);
   },
   updateOrder(id, u) {
-    const allowed = ['customerId','customerName','customerPhone','city','address','items','total','status','source','deliveryProvider','trackingNumber','notes','needsReview','reviewReason'];
+    const allowed = ['customerId','customerName','customerPhone','city','address','items','total','status','source','deliveryProvider','trackingNumber','notes','needsReview','reviewReason','customerCode'];
     _update('orders', id, u, allowed);
     return this.getOrder(id);
   },

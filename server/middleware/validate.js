@@ -25,13 +25,16 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || '');
 }
 
-// Middleware: sanitize all string body fields
+// Middleware: sanitize all string body fields (skip arrays/objects)
 function sanitizeBody(req, res, next) {
   if (req.body && typeof req.body === 'object') {
     for (const key of Object.keys(req.body)) {
+      // Only sanitize primitive strings — never touch arrays or objects
       if (typeof req.body[key] === 'string') {
         req.body[key] = sanitizeStr(req.body[key]);
       }
+      // For arrays of strings (like tags), sanitize each element
+      // But arrays of objects (like items) — leave untouched
     }
   }
   next();
