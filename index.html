@@ -164,5 +164,36 @@
       // Fallback: hide after 3s max
       setTimeout(window.hideSplash, 3000);
     </script>
+    <script>
+  // Generate Zellige SVG decoration safely
+  document.addEventListener("DOMContentLoaded", () => {
+    const svg = document.getElementById("splash-zellige");
+
+    if (!svg) return;
+
+    for (let i = 0; i < 40; i++) {
+      const p = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "polygon"
+      );
+
+      const x = i * 22 - 11;
+
+      p.setAttribute(
+        "points",
+        `${x},0 ${x + 11},11 ${x},22 ${x - 11},11`
+      );
+
+      p.setAttribute(
+        "fill",
+        ["#FF4D1A", "#C9954C", "#00C896"][i % 3]
+      );
+
+      p.setAttribute("opacity", "0.5");
+
+      svg.appendChild(p);
+    }
+  });
+</script>
   </body>
 </html>
