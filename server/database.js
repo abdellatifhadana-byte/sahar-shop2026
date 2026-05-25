@@ -15,6 +15,9 @@ sqlite.pragma('journal_mode = WAL');
 sqlite.pragma('foreign_keys = ON');
 // Migration: add customerCode if missing
 try { sqlite.exec("ALTER TABLE orders ADD COLUMN customerCode TEXT DEFAULT ''"); } catch {}
+// Migration: add colorImages and sizeType to products if missing
+try { sqlite.exec("ALTER TABLE products ADD COLUMN colorImages TEXT DEFAULT '{}'"); } catch {}
+try { sqlite.exec("ALTER TABLE products ADD COLUMN sizeType TEXT DEFAULT 'adult'"); } catch {}
 
 // ── Schema ────────────────────────────────────────────────────
 sqlite.exec(`
@@ -54,6 +57,8 @@ sqlite.exec(`
     views INTEGER DEFAULT 0,
     sales INTEGER DEFAULT 0,
     sku TEXT DEFAULT '',
+    colorImages TEXT DEFAULT '{}',
+    sizeType TEXT DEFAULT 'adult',
     createdAt TEXT NOT NULL,
     FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
   );
@@ -229,12 +234,12 @@ const db = {
   },
   createProduct(p) {
     const id = p.id || uid();
-    const product = { id, userId: p.userId, name: p.name, description: p.description||'', price: +p.price||0, cost: +(p.cost||0), stock: +(p.stock||0), category: p.category||'', sizes: JSON.stringify(p.sizes||[]), colors: JSON.stringify(p.colors||[]), status: p.status||'draft', emoji: p.emoji||'📦', imageUrl: p.imageUrl||'', images: JSON.stringify(p.images||[]), isForChildren: p.isForChildren?1:0, ageRange: p.ageRange||'', views: 0, sales: 0, sku: p.sku||id.slice(0,8).toUpperCase(), createdAt: p.createdAt||now() };
-    sqlite.prepare(`INSERT INTO products (id,userId,name,description,price,cost,stock,category,sizes,colors,status,emoji,imageUrl,images,isForChildren,ageRange,views,sales,sku,createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(product.id,product.userId,product.name,product.description,product.price,product.cost,product.stock,product.category,product.sizes,product.colors,product.status,product.emoji,product.imageUrl,product.images,product.isForChildren,product.ageRange,product.views,product.sales,product.sku,product.createdAt);
+    const product = { id, userId: p.userId, name: p.name, description: p.description||'', price: +p.price||0, cost: +(p.cost||0), stock: +(p.stock||0), category: p.category||'', sizes: JSON.stringify(p.sizes||[]), colors: JSON.stringify(p.colors||[]), status: p.status||'draft', emoji: p.emoji||'📦', imageUrl: p.imageUrl||'', images: JSON.stringify(p.images||[]), isForChildren: p.isForChildren?1:0, ageRange: p.ageRange||'', views: 0, sales: 0, sku: p.sku||id.slice(0,8).toUpperCase(), colorImages: JSON.stringify(p.colorImages||{}), sizeType: p.sizeType||'adult', createdAt: p.createdAt||now() };
+    sqlite.prepare(`INSERT INTO products (id,userId,name,description,price,cost,stock,category,sizes,colors,status,emoji,imageUrl,images,isForChildren,ageRange,views,sales,sku,colorImages,sizeType,createdAt) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(product.id,product.userId,product.name,product.description,product.price,product.cost,product.stock,product.category,product.sizes,product.colors,product.status,product.emoji,product.imageUrl,product.images,product.isForChildren,product.ageRange,product.views,product.sales,product.sku,product.colorImages,product.sizeType,product.createdAt);
     return _parseProduct(product);
   },
   updateProduct(id, u) {
-    const allowed = ['name','description','price','cost','stock','category','sizes','colors','status','emoji','imageUrl','images','isForChildren','ageRange','views','sales','sku'];
+    const allowed = ['name','description','price','cost','stock','category','sizes','colors','status','emoji','imageUrl','images','isForChildren','ageRange','views','sales','sku','colorImages','sizeType'];
     _update('products', id, u, allowed);
     return this.getProduct(id);
   },
@@ -381,7 +386,7 @@ function _update(table, id, u, allowed) {
 }
 
 function _parseProduct(p) {
-  return { ...p, sizes: _json(p.sizes, []), colors: _json(p.colors, []), images: _json(p.images, []), isForChildren: !!p.isForChildren };
+  return { ...p, sizes: _json(p.sizes, []), colors: _json(p.colors, []), images: _json(p.images, []), colorImages: _json(p.colorImages, {}), isForChildren: !!p.isForChildren, sizeType: p.sizeType||'adult' };
 }
 function _parseCustomer(c) { return { ...c, vip: !!c.vip }; }
 function _parseOrder(o) { return { ...o, items: _json(o.items, []), needsReview: !!o.needsReview }; }

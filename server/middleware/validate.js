@@ -25,16 +25,28 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || '');
 }
 
-// Middleware: sanitize all string body fields (skip arrays/objects)
+// Fields that contain large data (base64 images, long content) — never truncate
+const LARGE_FIELDS = new Set(['imageUrl','images','colorImages','logo','image','photo','avatar','cover','banner','data','content','description','notes','message','body','html','text','caption']);
+
+// Middleware: sanitize string body fields safely
 function sanitizeBody(req, res, next) {
   if (req.body && typeof req.body === 'object') {
     for (const key of Object.keys(req.body)) {
-      // Only sanitize primitive strings — never touch arrays or objects
-      if (typeof req.body[key] === 'string') {
-        req.body[key] = sanitizeStr(req.body[key]);
+      const val = req.body[key];
+      // Skip arrays and objects entirely
+      if (Array.isArray(val) || (val && typeof val === 'object')) continue;
+      // Skip large/image fields — never truncate them
+      if (LARGE_FIELDS.has(key)) {
+        if (typeof val === 'string') {
+          // Only remove dangerous HTML tags, don't truncate
+          req.body[key] = val.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<iframe[\s\S]*?<\/iframe>/gi, '');
+        }
+        continue;
       }
-      // For arrays of strings (like tags), sanitize each element
-      // But arrays of objects (like items) — leave untouched
+      // Normal string fields: sanitize and limit to 1000 chars
+      if (typeof val === 'string') {
+        req.body[key] = String(val).slice(0, 1000).replace(/[<>]/g, '').trim();
+      }
     }
   }
   next();

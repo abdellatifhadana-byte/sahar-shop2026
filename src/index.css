@@ -7,37 +7,81 @@
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── Core Palette ─────────────────────────────── */
-  --void:       #07080D;
-  --void2:      #0E1018;
-  --void3:      #161820;
-  --panel:      #12141C;
-  --panel2:     #1A1D28;
-  --panel3:     #222535;
+  /* ══ SAHAR SHOP — VOID AI COMMERCE DESIGN SYSTEM ══ */
 
-  /* ── Accent Triad ─────────────────────────────── */
+  /* ── Core Void Palette ──────────────────────────── */
+  --void:       #07080D;
+  --void2:      #0D0F18;
+  --void3:      #13151F;
+  --panel:      #10121A;
+  --panel2:     #181B26;
+  --panel3:     #1E2230;
+  --panel4:     #242840;
+
+  /* ── Ember (primary brand) ──────────────────────── */
   --ember:      #FF4D1A;
   --ember2:     #FF6B3D;
-  --ember-glow: rgba(255, 77, 26, 0.18);
-  --gold:       #C9954C;
-  --gold2:      #E8B96A;
-  --gold-glow:  rgba(201, 149, 76, 0.15);
-  --mint:       #00C896;
-  --mint2:      #00A87E;
-  --mint-glow:  rgba(0, 200, 150, 0.12);
+  --ember3:     #FF8A65;
+  --ember-dim:  #C93A10;
+  --ember-glow: rgba(255, 77, 26, 0.2);
+  --ember-soft: rgba(255, 77, 26, 0.08);
 
-  /* ── Text Scale ───────────────────────────────── */
-  --ink1:       #E8E4DC;
-  --ink2:       #A8A49C;
-  --ink3:       #5C5854;
-  --ink4:       #2E2C2A;
+  /* ── Gold (premium accent) ──────────────────────── */
+  --gold:       #F6C453;
+  --gold2:      #E8B030;
+  --gold3:      #FFD97D;
+  --gold-glow:  rgba(246, 196, 83, 0.15);
+  --gold-soft:  rgba(246, 196, 83, 0.07);
 
-  /* ── Borders ──────────────────────────────────── */
+  /* ── Mint AI (intelligent accent) ──────────────── */
+  --mint:       #00D2B3;
+  --mint2:      #00B096;
+  --mint3:      #4EECD4;
+  --mint-glow:  rgba(0, 210, 179, 0.15);
+  --mint-soft:  rgba(0, 210, 179, 0.07);
+
+  /* ── Aurora (rare highlight) ────────────────────── */
+  --aurora:     #7C6FFA;
+  --aurora2:    #9C92FB;
+  --aurora-glow: rgba(124, 111, 250, 0.15);
+
+  /* ── Text Hierarchy ─────────────────────────────── */
+  --ink1:       #EDF1F7;
+  --ink2:       #9BA6B8;
+  --ink3:       #526080;
+  --ink4:       #2A3040;
+  --ink5:       #161A26;
+
+  /* ── Borders & Dividers ─────────────────────────── */
   --border:     rgba(255, 255, 255, 0.06);
-  --border2:    rgba(255, 255, 255, 0.12);
-  --border3:    rgba(255, 255, 255, 0.18);
+  --border2:    rgba(255, 255, 255, 0.10);
+  --border3:    rgba(255, 255, 255, 0.16);
+  --border-ember: rgba(255, 77, 26, 0.2);
+  --border-mint:  rgba(0, 210, 179, 0.2);
+  --border-gold:  rgba(246, 196, 83, 0.2);
 
-  /* ── Semantic (keep backward compat) ─────────── */
+  /* ── Elevation Shadows ──────────────────────────── */
+  --shadow-sm:  0 1px 3px rgba(0,0,0,.4), 0 1px 8px rgba(0,0,0,.2);
+  --shadow-md:  0 4px 16px rgba(0,0,0,.5), 0 1px 4px rgba(0,0,0,.3);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.4);
+  --shadow-ember: 0 4px 20px rgba(255,77,26,.3);
+  --shadow-mint:  0 4px 20px rgba(0,210,179,.2);
+  --shadow-gold:  0 4px 20px rgba(246,196,83,.2);
+
+  /* ── Glassmorphism ──────────────────────────────── */
+  --glass:      rgba(16, 18, 26, 0.7);
+  --glass2:     rgba(24, 27, 38, 0.6);
+  --glass-border: rgba(255,255,255,0.08);
+
+  /* ── Radii ──────────────────────────────────────── */
+  --r-xs:  6px;
+  --r-sm:  10px;
+  --r:     14px;
+  --r-lg:  18px;
+  --r-xl:  24px;
+  --r-2xl: 32px;
+
+  /* ── Semantic aliases (backward compat) ─────────── */
   --clr-bg:     var(--void);
   --clr-deep:   var(--void2);
   --clr-card:   var(--panel);
@@ -1117,5 +1161,177 @@ button, a, [role="button"] {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   VOID AI COMMERCE — PREMIUM ENHANCEMENTS
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Ambient background effect ──────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 600px;
+  background:
+    radial-gradient(ellipse 80% 40% at 20% -10%, rgba(255,77,26,.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 30% at 80% 100%, rgba(0,210,179,.04) 0%, transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Premium glass card ─────────────────────────────────── */
+.glass-panel {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-lg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* ── Glow badges ────────────────────────────────────────── */
+.badge-ember {
+  background: var(--ember-soft);
+  border: 1px solid var(--border-ember);
+  color: var(--ember2);
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.badge-mint {
+  background: var(--mint-soft);
+  border: 1px solid var(--border-mint);
+  color: var(--mint);
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.badge-gold {
+  background: var(--gold-soft);
+  border: 1px solid var(--border-gold);
+  color: var(--gold);
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ── AI pulse animation ─────────────────────────────────── */
+@keyframes ai-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,210,179,.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(0,210,179,0); }
+}
+.ai-pulse {
+  animation: ai-pulse 2.5s ease-in-out infinite;
+}
+
+/* ── Glow text ──────────────────────────────────────────── */
+.text-ember { color: var(--ember); }
+.text-mint  { color: var(--mint);  }
+.text-gold  { color: var(--gold);  }
+.text-aurora { color: var(--aurora); }
+.glow-ember { text-shadow: 0 0 20px rgba(255,77,26,.5); }
+.glow-mint  { text-shadow: 0 0 20px rgba(0,210,179,.4); }
+
+/* ── Live indicator ─────────────────────────────────────── */
+.live-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 8px var(--mint);
+  animation: ai-pulse 2s ease-in-out infinite;
+  display: inline-block;
+}
+
+/* ── Premium input focus ────────────────────────────────── */
+.glass-input:focus {
+  border-color: rgba(255, 77, 26, 0.4) !important;
+  box-shadow: 0 0 0 3px rgba(255,77,26,.08), inset 0 1px 0 rgba(255,255,255,.04);
+  outline: none;
+}
+
+/* ── Metric card ────────────────────────────────────────── */
+.metric-card {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 18px 20px;
+  transition: all .2s ease;
+}
+.metric-card:hover {
+  border-color: var(--border2);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ── Section heading ────────────────────────────────────── */
+.section-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink3);
+}
+
+/* ── Ember divider ──────────────────────────────────────── */
+.divider-ember {
+  height: 1px;
+  background: linear-gradient(90deg, var(--ember-soft), transparent);
+  border: none;
+}
+
+/* ── Page fade-in ───────────────────────────────────────── */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter {
+  animation: page-in .3s ease forwards;
+}
+
+/* ── Notification toast upgrade ─────────────────────────── */
+.toast {
+  background: var(--panel3) !important;
+  border: 1px solid var(--border2) !important;
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255,255,255,.03) !important;
+  backdrop-filter: blur(20px);
+  border-radius: var(--r-lg) !important;
+}
+
+/* ── Topnav upgrade ─────────────────────────────────────── */
+.topnav {
+  background: rgba(7, 8, 13, 0.85) !important;
+  border-bottom: 1px solid rgba(255,255,255,.05) !important;
+  backdrop-filter: blur(24px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+}
+
+/* ── Zellige decorative border ──────────────────────────── */
+.zellige-border::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--ember) 20%,
+    var(--gold) 40%,
+    var(--mint) 60%,
+    var(--ember) 80%,
+    transparent 100%
+  );
+  opacity: 0.6;
+}
+
+/* ── Mobile bottom nav enhancement ─────────────────────── */
+@media (max-width: 768px) {
+  .mobile-nav {
+    background: rgba(7, 8, 13, 0.92) !important;
+    border-top: 1px solid rgba(255,255,255,.06) !important;
+    backdrop-filter: blur(20px) !important;
+    box-shadow: 0 -8px 32px rgba(0,0,0,.4) !important;
   }
 }

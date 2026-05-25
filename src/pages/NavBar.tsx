@@ -85,7 +85,7 @@ export default function NavBar() {
 
 
       {/* ══ DESKTOP TOP NAV ══════════════════════════════════ */}
-      <header className="topnav topnav-desktop" style={{ zIndex:100 }}>
+      <header className="topnav topnav-desktop zellige-border" style={{ zIndex:100, position:'relative' }}>
         <ZelligePattern />
 
         {/* Logo */}
@@ -95,7 +95,9 @@ export default function NavBar() {
               onError={e => { (e.currentTarget as HTMLImageElement).style.display='none'; (e.currentTarget.parentElement as HTMLElement).innerHTML='<span style="font-size:15px;font-weight:900;color:#FF4D1A">S</span>'; }}
             />
           </div>
-          <span className="nav-brand">{settings.brand.name || 'SAHAR shop'}</span>
+          <span className="nav-brand" style={{ background:'linear-gradient(90deg,var(--ink1),var(--ink2))',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent' }}>
+              {settings.brand.name || 'SAHAR shop'}
+            </span>
         </div>
 
         {/* Nav links */}

@@ -130,13 +130,9 @@
       <div id="splash-bg"></div>
       <div id="splash-glow"></div>
 
-      <!-- Zellige top decoration -->
-      <svg
-       id="splash-zellige"
-       viewBox="0 0 800 36"
-       preserveAspectRatio="xMidYMid slice"
-       aria-hidden="true">
-     </svg>
+      <!-- Zellige top decoration — SVG filled by script below -->
+      <svg id="splash-zellige" viewBox="0 0 800 36" preserveAspectRatio="xMidYMid slice" aria-hidden="true"></svg>
+
       <div id="splash-content">
         <div id="splash-logo-wrap">
           <img id="splash-logo" src="/sahar-logo-text.png" alt="SAHAR shop"
@@ -156,6 +152,22 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
+      // Zellige pattern — outside SVG for Vite compatibility
+      document.addEventListener('DOMContentLoaded', function() {
+        var svg = document.getElementById('splash-zellige');
+        if (!svg) return;
+        var colors = ['#FF4D1A','#C9954C','#00C896'];
+        for (var i = 0; i < 40; i++) {
+          var p = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+          var x = i * 22 - 11;
+          p.setAttribute('points', x+',0 '+(x+11)+',11 '+x+',22 '+(x-11)+',11');
+          p.setAttribute('fill', colors[i % 3]);
+          p.setAttribute('opacity', '0.5');
+          svg.appendChild(p);
+        }
+      });
+    </script>
+    <script>
       // Hide splash when React app mounts
       window.hideSplash = function() {
         const s = document.getElementById('splash');
@@ -164,36 +176,5 @@
       // Fallback: hide after 3s max
       setTimeout(window.hideSplash, 3000);
     </script>
-    <script>
-  // Generate Zellige SVG decoration safely
-  document.addEventListener("DOMContentLoaded", () => {
-    const svg = document.getElementById("splash-zellige");
-
-    if (!svg) return;
-
-    for (let i = 0; i < 40; i++) {
-      const p = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "polygon"
-      );
-
-      const x = i * 22 - 11;
-
-      p.setAttribute(
-        "points",
-        `${x},0 ${x + 11},11 ${x},22 ${x - 11},11`
-      );
-
-      p.setAttribute(
-        "fill",
-        ["#FF4D1A", "#C9954C", "#00C896"][i % 3]
-      );
-
-      p.setAttribute("opacity", "0.5");
-
-      svg.appendChild(p);
-    }
-  });
-</script>
   </body>
 </html>
