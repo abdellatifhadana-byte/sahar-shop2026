@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import './index.css';
 import App from './App';
+import ErrorBoundary from './components/ErrorBoundary';
 import { StoreProvider } from './store';
 import { checkBackend } from './services/api';
 
@@ -16,8 +17,8 @@ checkBackend().catch(() => {});
 const root = document.getElementById('root')!;
 createRoot(root).render(
   <BrowserRouter>
-    <StoreProvider>
+    <ErrorBoundary>
       <App />
-    </StoreProvider>
+    </ErrorBoundary>
   </BrowserRouter>
 );

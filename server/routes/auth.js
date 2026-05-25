@@ -1,5 +1,7 @@
 'use strict';
+const { validateAuth, sanitizeBody } = require('../middleware/validate');
 const router  = require('express').Router();
+const auth    = require('../middleware/auth');
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 const { db }  = require('../database');
@@ -18,7 +20,7 @@ function sign(user) {
 function safe(user) { const { password: _, ...rest } = user; return rest; }
 
 // POST /api/auth/register
-router.post('/register', async (req, res) => {
+router.post('/register', sanitizeBody, validateAuth, async (req, res) => {
   try {
     const { name, email, password, storeName } = req.body;
     if (!name || !email || !password) return res.status(400).json({ error: 'All fields required' });
@@ -42,7 +44,7 @@ router.post('/register', async (req, res) => {
 });
 
 // POST /api/auth/login
-router.post('/login', async (req, res) => {
+router.post('/login', sanitizeBody, validateAuth, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
@@ -56,7 +58,7 @@ router.post('/login', async (req, res) => {
 });
 
 // GET /api/auth/me
-router.get('/me', require('../middleware/auth'), (req, res) => {
+router.get('/me', auth, (req, res) => {
   const user = db.getUser(req.user.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
   res.json({ user: safe(user) });
@@ -104,7 +106,9 @@ router.post('/verify-otp', auth, (req, res) => {
 
 // POST /api/auth/change-password — change password (requires old password)
 router.post('/change-password', auth, async (req, res) => {
-  const { oldPassword, newPassword } = req.body;
+  // Accept both naming conventions: {oldPassword/newPassword} or {current/next}
+  const oldPassword = req.body.oldPassword || req.body.current;
+  const newPassword = req.body.newPassword || req.body.next;
   if (!oldPassword || !newPassword) return res.status(400).json({ error: 'كلا الحقلين مطلوبان' });
   if (newPassword.length < 6) return res.status(400).json({ error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' });
   

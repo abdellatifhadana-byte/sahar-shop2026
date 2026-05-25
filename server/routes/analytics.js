@@ -75,4 +75,48 @@ router.get('/', auth, (req, res) => {
   });
 });
 
+// GET /api/analytics/funnel — conversion funnel
+router.get('/funnel', auth, (req, res) => {
+  const orders = db.getOrders(req.user.id);
+  const products = db.getProducts(req.user.id);
+  
+  const totalOrders = orders.length;
+  const approved = orders.filter(o => ['approved','processing','shipped','delivered'].includes(o.status)).length;
+  const delivered = orders.filter(o => o.status === 'delivered').length;
+  const cancelled = orders.filter(o => o.status === 'cancelled').length;
+  const revenue = orders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + (o.total||0), 0);
+  const avgOrder = totalOrders > 0 ? Math.round(revenue / totalOrders) : 0;
+  
+  // City distribution
+  const cityMap = {};
+  orders.forEach(o => { if (o.city) cityMap[o.city] = (cityMap[o.city]||0) + 1; });
+  const cities = Object.entries(cityMap).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([city,count])=>({city,count}));
+  
+  // Product performance
+  const productSales = {};
+  orders.forEach(o => {
+    (o.items||[]).forEach((item) => {
+      if (!productSales[item.productId||item.productName]) {
+        productSales[item.productId||item.productName] = { name:item.productName, sales:0, revenue:0 };
+      }
+      productSales[item.productId||item.productName].sales += item.quantity||1;
+      productSales[item.productId||item.productName].revenue += (item.price||0)*(item.quantity||1);
+    });
+  });
+  const topProducts = Object.values(productSales).sort((a,b)=>b.sales-a.sales).slice(0,5);
+  
+  res.json({
+    funnel: {
+      total: totalOrders,
+      approved, delivered, cancelled,
+      conversionRate: totalOrders > 0 ? Math.round((delivered/totalOrders)*100) : 0,
+      approvalRate: totalOrders > 0 ? Math.round((approved/totalOrders)*100) : 0,
+    },
+    revenue: { total: revenue, avgOrder },
+    cities, topProducts,
+    lowStock: products.filter(p => p.status==='published' && p.stock <= 3).length,
+    outOfStock: products.filter(p => p.status==='published' && p.stock === 0).length,
+  });
+});
+
 module.exports = router;
