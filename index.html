@@ -131,19 +131,12 @@
       <div id="splash-glow"></div>
 
       <!-- Zellige top decoration -->
-      <svg id="splash-zellige" viewBox="0 0 800 36" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-        <script>
-          for(let i=0;i<40;i++){
-            const p=document.createElementNS('http://www.w3.org/2000/svg','polygon');
-            const x=i*22-11;
-            p.setAttribute('points',`${x},0 ${x+11},11 ${x},22 ${x-11},11`);
-            p.setAttribute('fill',['#FF4D1A','#C9954C','#00C896'][i%3]);
-            p.setAttribute('opacity','0.5');
-            document.currentScript.parentNode.appendChild(p);
-          }
-        </script>
-      </svg>
-
+      <svg
+       id="splash-zellige"
+       viewBox="0 0 800 36"
+       preserveAspectRatio="xMidYMid slice"
+       aria-hidden="true">
+     </svg>
       <div id="splash-content">
         <div id="splash-logo-wrap">
           <img id="splash-logo" src="/sahar-logo-text.png" alt="SAHAR shop"
