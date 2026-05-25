@@ -73,11 +73,7 @@ function AppShell() {
     <>
       <ThemeManager />
       {isAuthed && <RouterSync />}
-      <div className="aurora-bg" aria-hidden="true">
-        <div className="aurora-blob blob-1" />
-        <div className="aurora-blob blob-2" />
-        <div className="aurora-blob blob-3" />
-      </div>
+      {/* ambient background handled in CSS body */}
 
       <Routes>
         {/* ── PUBLIC: Storefront for customers ── */}
@@ -94,7 +90,7 @@ function AppShell() {
         {/* ── PROTECTED: Merchant dashboard ── */}
         {['/dashboard','/products','/orders','/messages','/customers',
           '/analytics','/connections','/delivery','/notifications',
-          '/settings','/studio','/import'].map(path => (
+          '/settings','/studio','/editor','/import'].map(path => (
           <Route key={path} path={path}
             element={isAuthed ? <MainLayout /> : <Navigate to="/login" replace />} />
         ))}

@@ -94,13 +94,13 @@ export default function NavBar() {
         {/* Right actions */}
         <div style={{ display:'flex', alignItems:'center', gap:6, flexShrink:0 }}>
           {storeLink && (
-            <a href={storeLink} target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:var_r_sm, background:'var(--mint-soft)', border:'1px solid rgba(0,210,179,.22)', color:'var(--mint)', fontSize:12, fontWeight:700, textDecoration:'none' }}>
+            <a href={storeLink} target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:'var(--r-sm)', background:'var(--mint-soft)', border:'1px solid rgba(0,210,179,.22)', color:'var(--mint)', fontSize:12, fontWeight:700, textDecoration:'none' }}>
               <ExternalLink size={11} strokeWidth={2.5}/> متجري
             </a>
           )}
           <button onClick={() => setShowSearch(true)}
-            style={{ width:32, height:32, borderRadius:var_r_sm, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(255,255,255,.05)', border:'1px solid var(--border)', color:'var(--ink3)', cursor:'pointer', transition:'all .15s' }}
-            onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color='var(--ink1)';}} 
+            style={{ width:32, height:32, borderRadius:'var(--r-sm)', display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(255,255,255,.05)', border:'1px solid var(--border)', color:'var(--ink3)', cursor:'pointer', transition:'all .15s' }}
+            onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.color='var(--ink1)';}}
             onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.color='var(--ink3)';}}>
             <Search size={14} strokeWidth={2.2}/>
           </button>
@@ -112,7 +112,7 @@ export default function NavBar() {
           )}
           <button
             onClick={() => updateSettings('design',{...settings.design, theme:isDark?'light':'dark'})}
-            style={{ width:32, height:32, borderRadius:var_r_sm, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(255,255,255,.05)', border:'1px solid var(--border)', color:'var(--ink3)', cursor:'pointer' }}
+            style={{ width:32, height:32, borderRadius:'var(--r-sm)', display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(255,255,255,.05)', border:'1px solid var(--border)', color:'var(--ink3)', cursor:'pointer' }}
             title={isDark?'وضع النهار':'وضع الليل'}>
             {isDark
               ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
@@ -120,7 +120,7 @@ export default function NavBar() {
             }
           </button>
           <button onClick={() => { if(window.confirm('هل تريد الخروج؟')) logout(); }}
-            style={{ width:32, height:32, borderRadius:var_r_sm, display:'flex', alignItems:'center', justifyContent:'center', background:'var(--ember-soft)', border:'1px solid rgba(255,77,26,.2)', color:'var(--ember)', cursor:'pointer' }}
+            style={{ width:32, height:32, borderRadius:'var(--r-sm)', display:'flex', alignItems:'center', justifyContent:'center', background:'var(--ember-soft)', border:'1px solid rgba(255,77,26,.2)', color:'var(--ember)', cursor:'pointer' }}
             title="خروج">
             <LogOut size={13} strokeWidth={2.5}/>
           </button>
@@ -249,6 +249,3 @@ export default function NavBar() {
     </>
   );
 }
-
-// Helper for CSS var in JSX (workaround for TS)
-const var_r_sm = 'var(--r-sm)';
