@@ -7,17 +7,12 @@ import GlobalSearch from '../components/GlobalSearch';
 // ── Skeleton fallback ─────────────────────────────
 function PageSkeleton() {
   return (
-    <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {[1,2,3,4].map(i => (
-        <div key={i} style={{
-          height: i === 1 ? 120 : 64,
-          borderRadius: 14,
-          background: 'linear-gradient(90deg, var(--void2) 25%, var(--void3) 50%, var(--void2) 75%)',
-          backgroundSize: '200% 100%',
-          animation: 'shimmer 1.4s infinite',
-        }} />
-      ))}
-      <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
+    <div style={{ padding:'20px 0', display:'flex', flexDirection:'column', gap:12, maxWidth:1100, margin:'0 auto' }}>
+      <div className="skeleton" style={{ height:100, borderRadius:18 }}/>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10 }}>
+        {[1,2,3].map(i=><div key={i} className="skeleton" style={{ height:80, borderRadius:14 }}/>)}
+      </div>
+      {[1,2,3].map(i=><div key={i} className="skeleton" style={{ height:56, borderRadius:12 }}/>)}
     </div>
   );
 }
@@ -98,8 +93,8 @@ export default function MainLayout() {
         </div>
       )}
       {/* Main content */}
-      <main style={{ flex: 1, paddingTop: 56, paddingBottom: 80, overflowX: 'hidden' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px' }}>
+      <main style={{ flex:1, paddingTop:56, paddingBottom:80, overflowX:'hidden', minHeight:'100dvh' }}>
+        <div style={{ maxWidth:1100, margin:'0 auto', padding:'20px 16px' }}>
           <Suspense fallback={<PageSkeleton />}>
             <PageContent />
           </Suspense>
