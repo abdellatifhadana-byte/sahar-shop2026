@@ -1,12 +1,11 @@
 'use strict';
-const { validateProduct, sanitizeBody } = require('../middleware/validate');
 const router = require('express').Router();
 const auth   = require('../middleware/auth');
 const { db } = require('../database');
 
 router.get('/', auth, (req, res) => res.json(db.getProducts(req.user.id)));
 
-router.post('/', auth, sanitizeBody, validateProduct, (req, res) => {
+router.post('/', auth, (req, res) => {
   const { name, price } = req.body;
   if (!name || price == null) return res.status(400).json({ error: 'Name and price are required' });
   const settings = db.getSettings(req.user.id) || {};

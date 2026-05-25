@@ -1,174 +1,147 @@
 import { useState } from 'react';
 import { useStore } from '../store';
-import { Eye, EyeOff, User, Mail, Lock, Store } from 'lucide-react';
+import { Lock, Mail, User, ArrowRight, Store, Eye, EyeOff } from 'lucide-react';
 
 export default function AuthPage() {
-  const { login, register } = useStore();
   const [isLogin, setIsLogin]   = useState(true);
+  const [form, setForm]         = useState({ name: '', email: '', password: '', storeName: '' });
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
-  const [showPwd, setShowPwd]   = useState(false);
-  const [logoErr, setLogoErr]   = useState(false);
-  const [form, setForm] = useState({ name:'', email:'', password:'', storeName:'' });
-
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const [showPass, setShowPass] = useState(false);
+  const { login, register, notify, setPage } = useStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true); setError('');
+    setError('');
+    if (!form.email || !form.password) { setError('البريد الإلكتروني وكلمة المرور مطلوبان'); return; }
+    if (!isLogin && !form.name) { setError('الاسم مطلوب'); return; }
+    if (!isLogin && form.password.length < 6) { setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return; }
+
+    setLoading(true);
     try {
       if (isLogin) {
         await login(form.email, form.password);
+        notify('success', 'مرحباً بعودتك! 👋');
       } else {
-        if (!form.name || !form.storeName) { setError('الاسم واسم المتجر مطلوبان'); setLoading(false); return; }
         await register(form.name, form.email, form.password, form.storeName);
+        notify('success', 'تم إنشاء الحساب! هيا نعد متجرك 🚀');
       }
     } catch (err: any) {
-      setError(err.message || (isLogin ? 'بيانات الدخول غير صحيحة' : 'حدث خطأ'));
+      const msg = err.message || (isLogin ? 'بيانات الدخول غير صحيحة' : 'حدث خطأ أثناء إنشاء الحساب');
+      setError(msg);
     }
     setLoading(false);
   };
 
+  const inp = {
+    width: '100%', padding: '13px 42px 13px 14px', borderRadius: 12,
+    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+    color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const,
+  };
+
   return (
-    <div dir="rtl" style={{ minHeight:'100dvh', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'20px', position:'relative', overflow:'hidden', background:'#07080D' }}>
-
-      {/* Background image */}
-      <div style={{
-        position:'absolute', inset:0, zIndex:0,
-        backgroundImage:'url(/sahar-banner-wide.png)',
-        backgroundSize:'cover', backgroundPosition:'center',
-        opacity:.12, filter:'blur(3px)', transform:'scale(1.05)',
-      }}/>
-
-      {/* Overlay */}
-      <div style={{ position:'absolute', inset:0, zIndex:1, background:'linear-gradient(135deg, rgba(7,8,13,.9) 0%, rgba(7,8,13,.7) 50%, rgba(7,8,13,.95) 100%)' }}/>
-
-      {/* Ember glow */}
-      <div style={{ position:'absolute', top:-150, left:'30%', width:400, height:300, zIndex:1, background:'radial-gradient(ellipse, rgba(255,77,26,.1) 0%, transparent 70%)', pointerEvents:'none' }}/>
-      <div style={{ position:'absolute', bottom:-100, right:'20%', width:300, height:250, zIndex:1, background:'radial-gradient(ellipse, rgba(0,200,150,.08) 0%, transparent 70%)', pointerEvents:'none' }}/>
-
-      {/* Zellige top */}
-      <svg style={{ position:'absolute',top:0,left:0,width:'100%',height:36,zIndex:2,pointerEvents:'none' }}
-        viewBox="0 0 800 36" preserveAspectRatio="xMidYMid slice">
-        {Array.from({length:40},(_,i)=>(
-          <polygon key={i} points={`${i*22-11},0 ${i*22},11 ${i*22-11},22 ${i*22-22},11`}
-            fill={['#FF4D1A','#C9954C','#00C896'][i%3]} opacity={0.45}/>
-        ))}
-      </svg>
-
-      {/* Card */}
-      <div style={{ position:'relative', zIndex:3, width:'100%', maxWidth:400 }}>
-
-        {/* Logo */}
-        <div style={{ textAlign:'center', marginBottom:24 }}>
-          <div style={{ width:96, height:96, margin:'0 auto 14px', borderRadius:22, overflow:'hidden', background:'rgba(7,8,13,.85)', boxShadow:'0 0 0 1px rgba(255,77,26,.3), 0 12px 40px rgba(255,77,26,.25)', backdropFilter:'blur(10px)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            {logoErr
-              ? <span style={{ fontSize:38, fontWeight:900, color:'#FF4D1A' }}>S</span>
-              : <img src="/sahar-logo-text.png" alt="SAHAR shop"
-                  style={{ width:'88%', height:'88%', objectFit:'contain' }}
-                  onError={() => setLogoErr(true)}
-                />
-            }
-          </div>
-          <h1 style={{ fontSize:22, fontWeight:900, color:'#E8E4DC', marginBottom:3, letterSpacing:'-.02em' }}>
-            <span style={{ color:'#FF4D1A', textShadow:'0 0 20px rgba(255,77,26,.4)' }}>SAHAR</span> shop
-          </h1>
-          <p style={{ color:'rgba(255,255,255,.3)', fontSize:10, letterSpacing:'.2em', textTransform:'uppercase', fontWeight:600 }}>
-            AI commerce OS
-          </p>
+    <div style={{
+          width: 110, height: 110, margin: '0 auto 16px', borderRadius: 24,
+          overflow: 'hidden', background: '#07080D',
+          boxShadow: '0 8px 32px rgba(255,77,26,.3), 0 0 0 1px rgba(255,255,255,.06)',
+        }}>
+          <img src="/sahar-logo-text.png" alt="SAHAR shop" style={{ width:'100%',height:'100%',objectFit:'contain' }}
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display='none'; }}
+          />
+        </div>
+          <h1 style={{ fontSize: 26, fontWeight: 900, color: 'var(--ink1)', marginBottom: 6, letterSpacing: '-.02em' }}><span style={{color:'var(--ember)'}}>SAHAR</span> shop</h1>
+          <p style={{ color: 'var(--ink3)', fontSize: 11, letterSpacing:'.12em', textTransform:'uppercase' }}>AI commerce OS</p>
         </div>
 
-        {/* Form card */}
-        <div style={{ background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.09)', borderRadius:22, padding:'26px 22px', backdropFilter:'blur(16px)', boxShadow:'0 24px 64px rgba(0,0,0,.4)' }}>
-
+        <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 24, padding: 28, backdropFilter: 'blur(20px)', boxShadow: '0 24px 64px rgba(0,0,0,.4)' }}>
           {/* Tabs */}
-          <div style={{ display:'flex', background:'rgba(0,0,0,.35)', borderRadius:12, padding:3, marginBottom:22, gap:3 }}>
-            {[['true','تسجيل الدخول'],['false','إنشاء حساب']].map(([v,label]) => (
-              <button key={v} onClick={() => { setIsLogin(v==='true'); setError(''); }}
-                style={{ flex:1, padding:'9px 0', borderRadius:9, fontSize:13, fontWeight:700, cursor:'pointer', border:'none', transition:'all .18s',
-                  background: String(isLogin)===v ? '#FF4D1A' : 'transparent',
-                  color: String(isLogin)===v ? '#fff' : 'rgba(255,255,255,.35)',
-                  boxShadow: String(isLogin)===v ? '0 3px 14px rgba(255,77,26,.35)' : 'none',
-                }}>
-                {label}
-              </button>
+          <div style={{ display: 'flex', background: 'var(--void2)', borderRadius: 12, padding: 4, marginBottom: 24 }}>
+            {[{ v: true, l: 'تسجيل الدخول' }, { v: false, l: 'حساب جديد' }].map(({ v, l }) => (
+              <button key={l} onClick={() => { setIsLogin(v); setError(''); }} style={{
+                flex: 1, padding: '9px 0', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all .2s',
+                background: isLogin === v ? 'var(--ember)' : 'transparent',
+                color: isLogin === v ? '#fff' : 'var(--ink3)', border: 'none',
+              }}>{l}</button>
             ))}
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:12 }}>
-
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {!isLogin && (
-              <>
-                <div style={{ position:'relative' }}>
-                  <User size={14} style={{ position:'absolute',right:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,.25)',pointerEvents:'none' }}/>
-                  <input type="text" placeholder="اسمك الكامل" required value={form.name} onChange={e=>set('name',e.target.value)}
-                    style={{ width:'100%',padding:'13px 40px 13px 14px',borderRadius:12,background:'rgba(255,255,255,.07)',border:'1px solid rgba(255,255,255,.1)',color:'#E8E4DC',fontSize:14,outline:'none',boxSizing:'border-box',fontFamily:'inherit',direction:'rtl',transition:'border-color .2s' }}
-                    onFocus={e=>(e.target.style.borderColor='rgba(255,77,26,.5)')}
-                    onBlur={e=>(e.target.style.borderColor='rgba(255,255,255,.1)')}
-                  />
-                </div>
-                <div style={{ position:'relative' }}>
-                  <Store size={14} style={{ position:'absolute',right:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,.25)',pointerEvents:'none' }}/>
-                  <input type="text" placeholder="اسم متجرك" required value={form.storeName} onChange={e=>set('storeName',e.target.value)}
-                    style={{ width:'100%',padding:'13px 40px 13px 14px',borderRadius:12,background:'rgba(255,255,255,.07)',border:'1px solid rgba(255,255,255,.1)',color:'#E8E4DC',fontSize:14,outline:'none',boxSizing:'border-box',fontFamily:'inherit',direction:'rtl',transition:'border-color .2s' }}
-                    onFocus={e=>(e.target.style.borderColor='rgba(255,77,26,.5)')}
-                    onBlur={e=>(e.target.style.borderColor='rgba(255,255,255,.1)')}
-                  />
-                </div>
-              </>
+              <div style={{ position: 'relative' }}>
+                <User size={16} style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink3)', pointerEvents: 'none' }} />
+                <input style={inp} type="text" placeholder="اسمك الكامل *" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required={!isLogin} />
+              </div>
             )}
-
-            <div style={{ position:'relative' }}>
-              <Mail size={14} style={{ position:'absolute',right:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,.25)',pointerEvents:'none' }}/>
-              <input type="email" placeholder="البريد الإلكتروني" required value={form.email} onChange={e=>set('email',e.target.value)}
-                style={{ width:'100%',padding:'13px 40px 13px 14px',borderRadius:12,background:'rgba(255,255,255,.07)',border:'1px solid rgba(255,255,255,.1)',color:'#E8E4DC',fontSize:14,outline:'none',boxSizing:'border-box',fontFamily:'inherit',transition:'border-color .2s' }}
-                onFocus={e=>(e.target.style.borderColor='rgba(255,77,26,.5)')}
-                onBlur={e=>(e.target.style.borderColor='rgba(255,255,255,.1)')}
-                dir="ltr"
-              />
+            {!isLogin && (
+              <div style={{ position: 'relative' }}>
+                <Store size={16} style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink3)', pointerEvents: 'none' }} />
+                <input style={inp} type="text" placeholder="اسم متجرك (اختياري)" value={form.storeName} onChange={e => setForm({ ...form, storeName: e.target.value })} />
+              </div>
+            )}
+            <div style={{ position: 'relative' }}>
+              <Mail size={16} style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink3)', pointerEvents: 'none' }} />
+              <input style={{ ...inp, direction: 'ltr', textAlign: 'right' }} type="email" placeholder="البريد الإلكتروني *" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
             </div>
-
-            <div style={{ position:'relative' }}>
-              <Lock size={14} style={{ position:'absolute',right:13,top:'50%',transform:'translateY(-50%)',color:'rgba(255,255,255,.25)',pointerEvents:'none' }}/>
-              <input type={showPwd?'text':'password'} placeholder="كلمة المرور" required value={form.password} onChange={e=>set('password',e.target.value)}
-                style={{ width:'100%',padding:'13px 40px 13px 40px',borderRadius:12,background:'rgba(255,255,255,.07)',border:'1px solid rgba(255,255,255,.1)',color:'#E8E4DC',fontSize:14,outline:'none',boxSizing:'border-box',fontFamily:'inherit',direction:'ltr',transition:'border-color .2s' }}
-                onFocus={e=>(e.target.style.borderColor='rgba(255,77,26,.5)')}
-                onBlur={e=>(e.target.style.borderColor='rgba(255,255,255,.1)')}
-              />
-              <button type="button" onClick={()=>setShowPwd(v=>!v)}
-                style={{ position:'absolute',left:13,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'rgba(255,255,255,.3)',padding:0,display:'flex' }}>
-                {showPwd ? <EyeOff size={15}/> : <Eye size={15}/>}
+            <div style={{ position: 'relative' }}>
+              <Lock size={16} style={{ position: 'absolute', right: 13, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink3)', pointerEvents: 'none' }} />
+              <input style={{ ...inp, direction: 'ltr', textAlign: 'right', paddingLeft: 42 }} type={showPass ? 'text' : 'password'} placeholder="كلمة المرور *" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required />
+              <button type="button" onClick={() => setShowPass(v => !v)} style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--ink3)', cursor: 'pointer', padding: 0 }}>
+                {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
 
             {error && (
-              <div style={{ background:'rgba(255,77,26,.1)',border:'1px solid rgba(255,77,26,.25)',borderRadius:10,padding:'10px 14px',fontSize:13,color:'#FF6B47',textAlign:'center' }}>
-                {error}
+              <div style={{ background: 'rgba(255,77,26,.1)', border: '1px solid rgba(255,77,26,.25)', borderRadius: 10, padding: '10px 14px', color: 'var(--ember2)', fontSize: 13 }}>
+                ⚠️ {error}
               </div>
             )}
 
-            <button type="submit" disabled={loading}
-              style={{ width:'100%',padding:'14px',borderRadius:12,background:loading?'rgba(255,77,26,.5)':'#FF4D1A',border:'none',color:'#fff',fontSize:15,fontWeight:700,cursor:loading?'not-allowed':'pointer',marginTop:4,boxShadow:loading?'none':'0 4px 20px rgba(255,77,26,.4)',transition:'all .2s' }}>
-              {loading ? '...' : isLogin ? '🔑 دخول' : '🚀 إنشاء الحساب'}
+            <button type="submit" disabled={loading} style={{
+              marginTop: 4, padding: '15px', borderRadius: 12, border: 'none',
+              background: 'var(--ember)', color: '#fff', fontSize: 15, fontWeight: 900,
+              cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? .7 : 1,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              boxShadow: '0 6px 20px rgba(255,77,26,.35)', transition: 'all .2s',
+            }}>
+              {loading ? (
+                <><span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span> جارٍ التحقق...</>
+              ) : (
+                <>{isLogin ? 'دخول إلى لوحة التحكم' : 'إنشاء الحساب'} <ArrowRight size={17} /></>
+              )}
             </button>
-
-            <div style={{ display:'flex', gap:8, marginTop:4 }}>
-              <button type="button" onClick={() => { localStorage.setItem('ai_commerce_token','demo-token-local'); window.location.href='/dashboard'; }}
-                style={{ flex:1,padding:'10px',borderRadius:10,background:'rgba(255,77,26,.08)',border:'1px solid rgba(255,77,26,.2)',color:'#FF4D1A',cursor:'pointer',fontWeight:700,fontSize:12 }}>
-                👨‍💼 تاجر Demo
-              </button>
-              <a href="/" style={{ flex:1,padding:'10px',borderRadius:10,background:'rgba(0,200,150,.08)',border:'1px solid rgba(0,200,150,.2)',color:'#00C896',cursor:'pointer',fontWeight:700,fontSize:12,textDecoration:'none',display:'flex',alignItems:'center',justifyContent:'center' }}>
-                🛍️ للزبائن
-              </a>
-            </div>
           </form>
 
-          <p style={{ textAlign:'center', marginTop:14, fontSize:12 }}>
-            <a href="/" style={{ color:'rgba(255,255,255,.2)', textDecoration:'none' }}>← الصفحة الرئيسية</a>
-          </p>
+          {/* Demo quick login */}
+          <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
+            <p style={{ textAlign: 'center', color: 'var(--ink3)', fontSize: 11, marginBottom: 10 }}>تجربة سريعة (Demo — بدون backend)</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => {
+                // Demo mode: use seed data directly without backend
+                setError('');
+                setLoading(true);
+                localStorage.setItem('ai_commerce_token', 'demo-token-local');
+                setTimeout(() => { window.location.href = '/dashboard'; }, 300);
+              }} style={{ flex: 1, padding: '10px', borderRadius: 10, background: 'rgba(255,77,26,.1)', border: '1px solid rgba(255,77,26,.25)', color: 'var(--ember2)', cursor: 'pointer', fontWeight: 700, fontSize: 12 }}>
+                👨‍💼 تاجر Demo
+              </button>
+              <a href="/" style={{ flex: 1, padding: '10px', borderRadius: 10, background: 'rgba(0,200,150,.08)', border: '1px solid rgba(0,200,150,.2)', color: 'var(--mint)', cursor: 'pointer', fontWeight: 700, fontSize: 12, textDecoration:'none', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                🛍️ صفحة الزبائن
+              </a>
+            </div>
+          </div>
         </div>
+
+        <p style={{ textAlign: 'center', marginTop: 20, color: 'var(--ink3)', fontSize: 12 }}>
+          لا يوجد حساب؟{' '}
+          <button onClick={() => { setIsLogin(false); setError(''); }} style={{ background: 'none', border: 'none', color: 'var(--ember)', cursor: 'pointer', fontWeight: 700, fontSize: 12 }}>
+            أنشئ حساباً مجانياً
+          </button>
+        </p>
+        <p style={{ textAlign: 'center', marginTop: 10, color: 'var(--ink3)', fontSize: 12 }}>
+          <a href="/" style={{ color: 'var(--ink3)', textDecoration: 'none' }}>← رجوع للصفحة الرئيسية</a>
+        </p>
       </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }

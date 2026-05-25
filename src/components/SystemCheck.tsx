@@ -1,152 +1,162 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useStore } from '../store';
-import { CheckCircle, XCircle, AlertCircle, RefreshCw, Wifi, WifiOff, Database, Bot, Shield } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 
 interface Check {
-  id: string;
-  label: string;
-  status: 'ok'|'warn'|'error'|'loading';
-  detail?: string;
+  name: string;
+  status: 'ok' | 'warn' | 'error' | 'checking';
+  detail: string;
 }
 
 export default function SystemCheck() {
-  const { settings, isOnline } = useStore();
+  const { settings, products, orders, customers, auditLogs } = useStore();
   const [checks, setChecks] = useState<Check[]>([]);
   const [running, setRunning] = useState(false);
 
-  const updateCheck = (id: string, status: Check['status'], detail?: string) => {
-    setChecks(prev => prev.map(c => c.id === id ? { ...c, status, detail } : c));
-  };
-
-  const runChecks = async () => {
+  const run = async () => {
     setRunning(true);
+    const results: Check[] = [];
 
-    const initial: Check[] = [
-      { id: 'backend',  label: 'الاتصال بالخادم',         status: 'loading' },
-      { id: 'auth',     label: 'نظام المصادقة',            status: 'loading' },
-      { id: 'db',       label: 'قاعدة البيانات',           status: 'loading' },
-      { id: 'ai',       label: 'مفتاح AI',                  status: 'loading' },
-      { id: 'whatsapp', label: 'واتساب Business',           status: 'loading' },
-      { id: 'jwt',      label: 'JWT Secret',                status: 'loading' },
-    ];
-    setChecks(initial);
-
-    // 1. Backend health check — via our own API (avoids CORS)
+    // Storage
     try {
-      const tok = localStorage.getItem('ai_commerce_token') || '';
-      const r = await fetch('/api/health', {
-        headers: tok ? { Authorization: `Bearer ${tok}` } : {},
-        signal: AbortSignal.timeout(6000),
+      const used = JSON.stringify(localStorage).length;
+      const usedMB = (used / 1024 / 1024).toFixed(2);
+      const pct = Math.round((used / (5 * 1024 * 1024)) * 100);
+      results.push({
+        name: 'التخزين المحلي', status: pct > 80 ? 'warn' : 'ok',
+        detail: `${usedMB}MB مستخدم من 5MB (${pct}%)`,
       });
-      if (r.ok) {
-        const d = await r.json();
-        updateCheck('backend', 'ok', `v${d.version} · ${d.uptime}s · ${d.memory}`);
-        updateCheck('db', d.db === 'ok' ? 'ok' : 'error', d.db === 'ok' ? 'SQLite WAL — OK' : 'DB Error');
-        updateCheck('jwt', d.env === 'production' ? 'ok' : 'warn',
-          d.env === 'production' ? 'JWT Secret configured' : 'Development mode — set JWT_SECRET in Railway');
-      } else {
-        updateCheck('backend', 'error', `HTTP ${r.status}`);
-        updateCheck('db', 'warn', 'Unknown');
-        updateCheck('jwt', 'warn', 'Could not verify');
-      }
-    } catch (e: any) {
-      updateCheck('backend', 'error', e.message);
-      updateCheck('db', 'warn', 'Backend unavailable');
-      updateCheck('jwt', 'warn', 'Backend unavailable');
+    } catch {
+      results.push({ name: 'التخزين المحلي', status: 'error', detail: 'فشل في قراءة localStorage' });
     }
 
-    // 2. Auth check — verify token
-    const token = localStorage.getItem('ai_commerce_token');
-    if (token && token !== 'demo-token-local') {
+    // AI
+    if (settings.ai.apiKey) {
+      results.push({ name: 'فحص AI API Key', status: 'checking', detail: 'جارٍ التحقق...' });
+      setChecks([...results]);
       try {
-        const r = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: AbortSignal.timeout(4000),
+        const r = await fetch('https://api.openai.com/v1/models', {
+          headers: { Authorization: `Bearer ${settings.ai.apiKey}` },
+          signal: AbortSignal.timeout(6000),
         });
-        updateCheck('auth', r.ok ? 'ok' : 'error', r.ok ? 'JWT valid · logged in' : 'Token invalid');
+        results[results.length - 1] = { name: 'OpenAI API Key', status: r.ok ? 'ok' : 'error', detail: r.ok ? 'متصل ويعمل ✅' : `خطأ: ${r.status}` };
       } catch {
-        updateCheck('auth', 'warn', 'Could not verify');
+        results[results.length - 1] = { name: 'OpenAI API Key', status: 'error', detail: 'لم يمكن الاتصال' };
       }
     } else {
-      updateCheck('auth', token === 'demo-token-local' ? 'warn' : 'warn',
-        token === 'demo-token-local' ? 'Demo mode — not real auth' : 'Not logged in');
+      results.push({ name: 'OpenAI API Key', status: 'warn', detail: 'غير مضاف — سيعمل بالمحاكاة' });
     }
 
-    // 3. AI key check — via backend proxy (avoids CORS + hides key)
-    const hasAiKey = !!(settings.ai?.apiKey || settings.ai?.geminiKey);
-    if (hasAiKey) {
-      try {
-        const tok = localStorage.getItem('ai_commerce_token') || '';
-        const service = settings.ai?.geminiKey ? 'gemini' : 'openai';
-        const apiKey = settings.ai?.geminiKey || settings.ai?.apiKey;
-        const r = await fetch('/api/settings/verify-connection', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
-          body: JSON.stringify({ service, apiKey }),
-          signal: AbortSignal.timeout(10000),
-        });
-        const d = await r.json();
-        updateCheck('ai', d.ok ? 'ok' : 'error', d.ok ? `${service === 'gemini' ? 'Gemini' : 'OpenAI'} · ${d.info || 'connected'}` : d.error || 'Invalid key');
-      } catch {
-        updateCheck('ai', 'warn', 'Could not verify');
-      }
+    // WhatsApp
+    if (settings.social.whatsapp.connected) {
+      results.push({ name: 'WhatsApp', status: 'ok', detail: `متصل — Phone ID: ${settings.social.whatsapp.pageId?.slice(0, 8)}...` });
     } else {
-      updateCheck('ai', 'warn', 'No API key — using local AI (Darija fallback)');
+      results.push({ name: 'WhatsApp', status: 'warn', detail: 'غير متصل — الإشعارات تعمل بالمحاكاة' });
     }
 
-    // 4. WhatsApp check
-    const waConnected = (settings.social as any)?.whatsapp?.connected;
-    updateCheck('whatsapp', waConnected ? 'ok' : 'warn',
-      waConnected ? 'WhatsApp Business connected' : 'Not connected — orders use wa.me link');
+    // Facebook
+    results.push({
+      name: 'Facebook', status: settings.social.facebook.connected ? 'ok' : 'warn',
+      detail: settings.social.facebook.connected ? 'متصل' : 'غير متصل',
+    });
 
+    // Instagram
+    results.push({
+      name: 'Instagram', status: settings.social.instagram.connected ? 'ok' : 'warn',
+      detail: settings.social.instagram.connected ? 'متصل' : 'غير متصل',
+    });
+
+    // Delivery
+    const activeProv = settings.delivery.providers.filter(p => p.enabled);
+    results.push({
+      name: 'شركات التوصيل', status: activeProv.length > 0 ? 'ok' : 'warn',
+      detail: activeProv.length > 0 ? `${activeProv.length} شركة مفعّلة` : 'لم تضف شركة توصيل',
+    });
+
+    // Data
+    results.push({ name: 'البيانات', status: 'ok', detail: `${products.length} منتج · ${orders.length} طلب · ${customers.length} زبون · ${auditLogs.length} سجل` });
+
+    // Browser features
+    results.push({ name: 'Web Audio (صوت)', status: 'AudioContext' in window ? 'ok' : 'warn', detail: 'AudioContext' in window ? 'متاح' : 'غير متاح في هذا المتصفح' });
+    results.push({ name: 'Service Worker (PWA)', status: 'serviceWorker' in navigator ? 'ok' : 'warn', detail: 'serviceWorker' in navigator ? 'متاح — يمكن التنصيب' : 'غير متاح' });
+
+    // Backend check
+    results.push({ name: 'Backend Server', status: 'checking', detail: 'جارٍ التحقق...' });
+    setChecks([...results]);
+    try {
+      const r = await fetch('http://localhost:3001/api/health', { signal: AbortSignal.timeout(3000) });
+      const data = await r.json();
+      results[results.length - 1] = { name: 'Backend Server', status: r.ok ? 'ok' : 'warn', detail: r.ok ? `يعمل — v${data.version} — ${data.uptime}` : 'لم يستجب' };
+    } catch {
+      results[results.length - 1] = { name: 'Backend Server', status: 'warn', detail: 'لا يعمل — التطبيق يعمل بـ localStorage' };
+    }
+
+    setChecks(results);
     setRunning(false);
   };
 
-  useEffect(() => { if (isOnline) runChecks(); }, [isOnline]);
-
-  const icons = {
-    ok:      <CheckCircle size={15} style={{ color: 'var(--mint)' }} />,
-    warn:    <AlertCircle size={15} style={{ color: '#f59e0b' }} />,
-    error:   <XCircle size={15} style={{ color: 'var(--ember)' }} />,
-    loading: <RefreshCw size={15} style={{ color: 'var(--ink3)', animation: 'spin 1s linear infinite' }} />,
+  const statusIcon = (s: Check['status']) => {
+    if (s === 'ok')       return <CheckCircle className="w-4 h-4 text-emerald-400" />;
+    if (s === 'warn')     return <AlertCircle className="w-4 h-4 text-amber-400" />;
+    if (s === 'error')    return <XCircle className="w-4 h-4 text-red-400" />;
+    return <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />;
   };
 
+  const statusBg = (s: Check['status']) => {
+    if (s === 'ok')    return 'rgba(16,185,129,0.07)';
+    if (s === 'warn')  return 'rgba(245,158,11,0.07)';
+    if (s === 'error') return 'rgba(239,68,68,0.07)';
+    return 'var(--bg-input)';
+  };
+
+  const summary = checks.length > 0 ? {
+    ok: checks.filter(c => c.status === 'ok').length,
+    warn: checks.filter(c => c.status === 'warn').length,
+    error: checks.filter(c => c.status === 'error').length,
+  } : null;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink3)', letterSpacing: '.06em' }}>
-          فحص النظام
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-primary font-bold">فحص النظام</h2>
+          <p className="text-muted text-xs">تحقق من حالة كل مكون</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {isOnline
-            ? <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--mint)', fontWeight: 700 }}><Wifi size={12}/> متصل</span>
-            : <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--ember)', fontWeight: 700 }}><WifiOff size={12}/> غير متصل</span>
-          }
-          <button onClick={runChecks} disabled={running}
-            style={{ padding: '4px 10px', borderRadius: 7, fontSize: 11, fontWeight: 700, background: 'var(--void2)', border: '1px solid var(--border)', color: 'var(--ink2)', cursor: 'pointer' }}>
-            {running ? '⟳' : '↺'} فحص
-          </button>
-        </div>
+        <button onClick={run} disabled={running} className="btn btn-primary btn-sm disabled:opacity-50">
+          {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          {running ? 'جارٍ الفحص...' : 'فحص الآن'}
+        </button>
       </div>
 
-      {checks.length > 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {checks.map(c => (
-            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--void2)', borderRadius: 8, border: '1px solid var(--border)' }}>
-              {icons[c.status]}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink1)' }}>{c.label}</div>
-                {c.detail && <div style={{ fontSize: 10, color: 'var(--ink3)', marginTop: 1 }}>{c.detail}</div>}
+      {summary && (
+        <div className="flex gap-3">
+          <span className="badge text-emerald-400 px-3 py-1" style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)' }}>✅ {summary.ok} سليم</span>
+          {summary.warn > 0 && <span className="badge text-amber-400 px-3 py-1" style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}>⚠️ {summary.warn} تحذير</span>}
+          {summary.error > 0 && <span className="badge text-red-400 px-3 py-1" style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)' }}>❌ {summary.error} خطأ</span>}
+        </div>
+      )}
+
+      {checks.length > 0 && (
+        <div className="space-y-2">
+          {checks.map((c, i) => (
+            <div key={i} className="flex items-start gap-3 p-3 rounded-xl border"
+              style={{ background: statusBg(c.status), borderColor: 'var(--border)' }}>
+              <div className="flex-shrink-0 mt-0.5">{statusIcon(c.status)}</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-primary font-semibold text-sm">{c.name}</p>
+                <p className="text-muted text-xs">{c.detail}</p>
               </div>
             </div>
           ))}
         </div>
-      ) : (
-        <div style={{ fontSize: 12, color: 'var(--ink3)', textAlign: 'center', padding: '16px 0' }}>
-          {isOnline ? '...' : 'غير متصل بالإنترنت'}
+      )}
+
+      {checks.length === 0 && (
+        <div className="card p-12 text-center text-muted">
+          <RefreshCw className="w-12 h-12 mx-auto mb-3 opacity-25" />
+          <p className="text-sm">اضغط "فحص الآن" لبدء التحقق من النظام</p>
         </div>
       )}
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }

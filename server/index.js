@@ -81,21 +81,14 @@ app.use('/api/loyalty', require('./routes/loyalty'));
 app.use('/api/ai',            require('./routes/ai'));
 
 // ── Health ───────────────────────────────────────────────────
-app.get('/api/health', (req, res) => {
-  const mem = process.memoryUsage();
-  res.json({
-    status: 'ok', version: '3.2.0', name: 'SAHAR shop AI Commerce OS',
-    time: new Date().toISOString(),
-    uptime: Math.round(process.uptime()) + 's',
-    memory: Math.round(mem.heapUsed/1024/1024) + 'MB',
-    node: process.version,
-    ai: {
-      openai: !!(process.env.OPENAI_API_KEY),
-      gemini: !!(process.env.GEMINI_API_KEY),
-    },
-    env: process.env.NODE_ENV || 'development',
-  });
-});
+app.get('/api/health', (req, res) => res.json({
+  status: 'ok', version: '2.1.0', name: 'AI Commerce OS',
+  time: new Date().toISOString(), uptime: Math.round(process.uptime()) + 's',
+  ai: {
+    openai: !!(process.env.OPENAI_API_KEY),
+    gemini: !!(process.env.GEMINI_API_KEY),
+  },
+}));
 
 // ── Serve uploaded media ─────────────────────────────────────
 const UPLOADS = path.join(DATA_DIR, 'uploads');

@@ -194,7 +194,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const offOrder = api.onWS('order_created', (data) => {
       setState(s => ({ ...s, orders: [data, ...s.orders.filter(o => o.id !== data.id)] }));
       notify('info', `🛒 طلب جديد من ${data.customerName}`);
-      try { Sounds.newOrder(); } catch {}
     });
     const offUpdated = api.onWS('order_updated', (data) => {
       setState(s => ({ ...s, orders: s.orders.map(o => o.id === data.id ? data : o) }));
@@ -335,7 +334,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       } catch (e: any) { notify('warning', `تحذير: ${e.message}`); }
     }
     notify('success', '✅ تم تأكيد الطلب');
-    try { Sounds.approved(); } catch {}
     log('المدير', `وافق على طلب: ${id}`, '', 'order', 'success');
   };
 
@@ -359,7 +357,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       } catch {}
     }
     notify('success', `🚚 تم الشحن — رقم التتبع: ${trk}`);
-    try { Sounds.shipped(); } catch {}
     log('النظام', `شحن طلب: ${id}`, trk, 'delivery', 'success');
   };
 
@@ -368,8 +365,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (state.isOnline && api.getToken()) {
       try { await api.ordersAPI.deliver(id); } catch {}
     }
-    notify('success', '📦 تم التوصيل بنجاح! 🎉');
-    try { Sounds.delivered(); } catch {}
+    notify('success', '📦 تم التوصيل بنجاح');
     log('النظام', `تم توصيل طلب: ${id}`, '', 'order', 'success');
   };
 

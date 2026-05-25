@@ -1,12 +1,11 @@
 'use strict';
-const { validateOrder, sanitizeBody } = require('../middleware/validate');
 const router = require('express').Router();
 const auth   = require('../middleware/auth');
 const { db } = require('../database');
 
 router.get('/', auth, (req, res) => res.json(db.getOrders(req.user.id)));
 
-router.post('/', auth, sanitizeBody, (req, res) => {
+router.post('/', auth, (req, res) => {
   const order = db.createOrder({ ...req.body, userId: req.user.id, status: 'pending' });
   db.addLog({ userId: req.user.id, user: 'AI', action: `New order: ${order.id}`, details: order.customerName, type: 'order', severity: 'info' });
   db.addNotification({ userId: req.user.id, type: 'info', message: `🛒 طلب جديد من ${order.customerName}` });
@@ -169,19 +168,11 @@ router.put('/:id/deliver', auth, (req, res) => {
   db.updateOrder(o.id, { status: 'delivered' });
   db.addLog({ userId: req.user.id, user: 'System', action: `Delivered: ${o.id}`, details: o.customerName, type: 'order', severity: 'success' });
   req.app.get('broadcast')?.(req.user.id, { event: 'order_updated', data: db.getOrder(o.id) });
-  
-  // Generate WhatsApp review request
-  const brand = (db.getSettings(req.user.id)||{}).brand || {};
-  const storeBase = process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : '';
-  const reviewMsg = `🎉 مبروك ${o.customerName}!\n\nوصل طلبك بنجاح من ${brand.name||'SAHAR shop'} 📦\n\nنتمنى يكون عجبك كلشي 💛\n\n⭐ كنفرحو بتقييمك:\n• كيف كانت جودة المنتج؟\n• كيف كانت سرعة التوصيل؟\n• هل ستوصي بنا لأصدقائك؟\n\nرأيك مهم جداً لنا 🙏\n${storeBase ? '🔗 ' + storeBase + '/store/' + req.user.id : ''}\n\nشكراً لثقتك! 💫\n— ${brand.name||'SAHAR shop'} ✨`;
-  const waPhone = (o.customerPhone||'').replace(/\D/g,'');
-  const reviewWaUrl = waPhone ? 'https://wa.me/' + waPhone + '?text=' + encodeURIComponent(reviewMsg) : null;
-  
-  res.json({ ...db.getOrder(o.id), reviewWaUrl, reviewMsg });
+  res.json(db.getOrder(o.id));
 });
 
 // POST /api/orders/public — create order from storefront (no auth)
-router.post('/public', sanitizeBody, validateOrder, async (req, res) => {
+router.post('/public', async (req, res) => {
   const { userId, items, customerName, customerPhone, city, address, notes, total, source } = req.body;
   if (!userId || !items?.length || !customerName || !customerPhone)
     return res.status(400).json({ error: 'userId, items, name, phone required' });

@@ -108,92 +108,55 @@ function useCart() {
 /* Product Card */
 function ProductCard({ p, onAdd, onView, currency }: { p:SProduct; onAdd:(p:SProduct)=>void; onView:(p:SProduct)=>void; currency:string }) {
   const [liked, setLiked] = useState(false);
-  const [hover, setHover] = useState(false);
-  const isNew = p.createdAt && (Date.now() - new Date(p.createdAt).getTime() < 7*24*60*60*1000);
-
   return (
-    <div onClick={() => onView(p)}
-      onMouseEnter={()=>setHover(true)}
-      onMouseLeave={()=>setHover(false)}
-      style={{
-        background:'var(--panel)',
-        border:`1px solid ${hover?'rgba(255,77,26,.3)':'var(--border)'}`,
-        borderRadius:20,overflow:'hidden',cursor:'pointer',
-        transition:'all .22s ease',
-        transform:hover?'translateY(-5px)':'none',
-        boxShadow:hover?'0 12px 40px rgba(0,0,0,.35), 0 0 0 1px rgba(255,77,26,.1)':'none',
-      }}>
-
-      {/* Image area */}
-      <div style={{ height:210,position:'relative',background:p.imageUrl?'#000':'var(--void2)',overflow:'hidden' }}>
+    <div onClick={() => onView(p)} style={{
+      background:'var(--panel)',border:'1px solid var(--border)',borderRadius:'var(--r-lg)',
+      overflow:'hidden',cursor:'pointer',transition:'all .2s',
+    }}
+      onMouseOver={e => (e.currentTarget.style.transform='translateY(-3px)')}
+      onMouseOut={e  => (e.currentTarget.style.transform='translateY(0)')}
+    >
+      <div style={{ height:220,position:'relative',background:p.imageUrl?'#000':'var(--void2)',overflow:'hidden' }}>
         {p.imageUrl
-          ? <img src={p.imageUrl} alt={p.name}
-              style={{ width:'100%',height:'100%',objectFit:'cover',transition:'transform .4s ease',transform:hover?'scale(1.06)':'scale(1)' }}
-              loading="lazy" />
-          : <div style={{ width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:60 }}>{p.emoji||'📦'}</div>
+          ? <img src={p.imageUrl} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} loading="lazy" />
+          : <div style={{ width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:64 }}>{p.emoji||'📦'}</div>
         }
-        {/* Gradient bottom */}
-        <div style={{ position:'absolute',bottom:0,left:0,right:0,height:80,background:'linear-gradient(transparent,rgba(0,0,0,.65))' }}/>
-
-        {/* Top badges */}
-        <div style={{ position:'absolute',top:10,right:10,display:'flex',flexDirection:'column',gap:4,alignItems:'flex-end' }}>
-          {isNew && <span style={{ background:'rgba(0,200,150,.9)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99,letterSpacing:'.05em' }}>✨ جديد</span>}
-          {p.stock <= 5 && p.stock > 0 && <span style={{ background:'rgba(245,158,11,.9)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>⚡ آخر {p.stock}</span>}
-          {p.sales > 10 && <span style={{ background:'rgba(255,77,26,.9)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>🔥 الأكثر طلباً</span>}
-          {p.stock === 0 && <span style={{ background:'rgba(0,0,0,.7)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>نفذ المخزون</span>}
+        {/* Badges */}
+        <div style={{ position:'absolute',top:10,right:10,display:'flex',flexDirection:'column',gap:5 }}>
+          {p.stock <= 5 && p.stock > 0 && <span style={{ background:'rgba(245,158,11,.9)',color:'#fff',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:99 }}>آخر {p.stock} قطع</span>}
+          {p.sales > 10 && <span style={{ background:'rgba(255,77,26,.9)',color:'#fff',fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:99 }}>الأكثر طلباً 🔥</span>}
         </div>
-
         {/* Like */}
-        <button onClick={e=>{e.stopPropagation();setLiked(v=>!v)}}
-          style={{ position:'absolute',top:10,left:10,width:32,height:32,borderRadius:'50%',background:'rgba(0,0,0,.45)',backdropFilter:'blur(6px)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all .2s' }}>
-          <Heart size={14} fill={liked?'#ef4444':'none'} color={liked?'#ef4444':'#fff'}/>
+        <button onClick={e=>{e.stopPropagation();setLiked(v=>!v)}} style={{
+          position:'absolute',top:10,left:10,width:32,height:32,borderRadius:'50%',
+          background:'rgba(0,0,0,.4)',border:'none',color:liked?'#ef4444':'#fff',cursor:'pointer',
+          display:'flex',alignItems:'center',justifyContent:'center',
+        }}>
+          <Heart size={15} fill={liked?'#ef4444':'none'} />
         </button>
-
-        {/* Colors row at bottom */}
-        {p.colors?.length > 0 && (
-          <div style={{ position:'absolute',bottom:10,right:10,left:10,display:'flex',gap:5,justifyContent:'flex-start',alignItems:'center' }}>
-            {(p.colors||[]).slice(0,5).map((clr:string,ci:number) => {
-              const colorMap: Record<string,string> = { 'أسود':'#1a1a1a','أبيض':'#f5f5f5','أحمر':'#ef4444','أزرق':'#3b82f6','أخضر':'#22c55e','رمادي':'#6b7280','بيج':'#d4b896','وردي':'#f472b6','بني':'#92400e','كحلي':'#1e3a5f','زيتي':'#3d5a1e','بنفسجي':'#a855f7','برتقالي':'#f97316','أصفر':'#eab308' };
-              const bg = colorMap[clr] || '#888';
-              return <div key={ci} title={clr} style={{ width:16,height:16,borderRadius:'50%',background:bg,border:'2px solid rgba(255,255,255,.8)',boxShadow:'0 1px 4px rgba(0,0,0,.4)',flexShrink:0 }}/>;
-            })}
-            {(p.colors||[]).length > 5 && <span style={{ fontSize:9,color:'rgba(255,255,255,.7)',fontWeight:700 }}>+{p.colors.length-5}</span>}
-          </div>
-        )}
-
-        {/* Quick add — shows on hover */}
-        <button onClick={e=>{e.stopPropagation();if(p.stock>0)onAdd(p);}}
-          style={{
-            position:'absolute',bottom:0,left:0,right:0,height:40,
-            background:'linear-gradient(135deg,#FF4D1A,#ff6b42)',
-            border:'none',color:'#fff',fontSize:13,fontWeight:800,cursor:p.stock>0?'pointer':'not-allowed',
-            display:'flex',alignItems:'center',justifyContent:'center',gap:7,
-            transition:'all .25s ease',
-            opacity:hover&&p.stock>0?1:0,
-            transform:hover&&p.stock>0?'translateY(0)':'translateY(8px)',
-          }}>
-          <ShoppingCart size={14}/> أضف للسلة سريعاً
+        {/* Quick add */}
+        <button onClick={e=>{e.stopPropagation();onAdd(p)}} style={{
+          position:'absolute',bottom:10,left:10,right:10,height:36,background:'var(--ember)',
+          border:'none',borderRadius:8,color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer',
+          display:'flex',alignItems:'center',justifyContent:'center',gap:6,opacity:0,transition:'opacity .2s',
+        }}
+          className="quick-add-btn">
+          <ShoppingCart size={14} /> أضف للسلة
         </button>
       </div>
-
-      {/* Info */}
-      <div style={{ padding:'12px 14px 14px' }}>
-        <div style={{ fontSize:10,color:'var(--ink3)',marginBottom:4,fontWeight:700,letterSpacing:'.06em',textTransform:'uppercase' }}>{p.category||'—'}</div>
-        <div style={{ fontSize:14,fontWeight:800,color:'var(--ink1)',marginBottom:8,lineHeight:1.4,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical' }}>{p.name}</div>
-
-        {/* Sizes preview */}
+      <div style={{ padding:'12px 14px' }}>
+        <div style={{ fontSize:10,color:'var(--ink3)',marginBottom:3,fontWeight:600,letterSpacing:'.04em' }}>{p.category}</div>
+        <div style={{ fontSize:14,fontWeight:700,color:'var(--ink1)',marginBottom:6,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical' }}>{p.name}</div>
         {p.sizes?.length > 0 && (
-          <div style={{ display:'flex',gap:4,flexWrap:'wrap',marginBottom:10 }}>
-            {p.sizes.slice(0,5).map((s:string) => (
-              <span key={s} style={{ fontSize:10,background:'var(--void2)',border:'1px solid var(--border)',borderRadius:6,padding:'2px 7px',color:'var(--ink2)',fontWeight:600 }}>{s}</span>
+          <div style={{ display:'flex',gap:4,flexWrap:'wrap',marginBottom:8 }}>
+            {p.sizes.slice(0,4).map(s=>(
+              <span key={s} style={{ fontSize:10,background:'var(--void2)',border:'1px solid var(--border)',borderRadius:5,padding:'1px 6px',color:'var(--ink2)' }}>{s}</span>
             ))}
-            {p.sizes.length > 5 && <span style={{ fontSize:10,color:'var(--ink3)' }}>+{p.sizes.length-5}</span>}
           </div>
         )}
-
         <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}>
-          <div style={{ fontSize:19,fontWeight:900,color:'var(--ember)',letterSpacing:'-0.02em',lineHeight:1 }}>
-            {p.price.toLocaleString()} <span style={{ fontSize:11,fontWeight:600,opacity:.7 }}>{currency}</span>
+          <div style={{ fontSize:18,fontWeight:900,color:'var(--ember)',letterSpacing:'-0.03em' }}>
+            {p.price.toLocaleString()} <span style={{ fontSize:12 }}>{currency}</span>
           </div>
           <div style={{ display:'flex',alignItems:'center',gap:3,fontSize:11,color:'var(--gold)' }}>
             <Star size={12} fill="var(--gold)" stroke="none" /> 4.9
@@ -308,28 +271,6 @@ function ProductModal({ p, cart, onClose, currency, userId }: { p:SProduct; cart
             </div>
           )}
 
-          {/* Related products */}
-          {p.category && (
-            <div style={{ marginBottom:18 }}>
-              <div style={{ fontSize:11,fontWeight:700,color:'var(--ink3)',marginBottom:10,letterSpacing:'.06em' }}>🛍️ قد يعجبك أيضاً</div>
-              <div style={{ display:'flex',gap:8,overflowX:'auto',paddingBottom:4 }}>
-                {(window as any).__sfProducts?.filter((rp:any) => rp.id !== p.id && rp.category === p.category).slice(0,4).map((rp:any) => (
-                  <div key={rp.id}
-                    onClick={()=>{ onClose(); setTimeout(()=>document.dispatchEvent(new CustomEvent('viewProduct',{detail:rp})),50); }}
-                    style={{ flexShrink:0,width:88,borderRadius:10,overflow:'hidden',cursor:'pointer',background:'var(--void2)',border:'1px solid var(--border)' }}>
-                    <div style={{ height:70,background:rp.imageUrl?'#000':'var(--void3)',overflow:'hidden' }}>
-                      {rp.imageUrl ? <img src={rp.imageUrl} alt={rp.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} loading="lazy"/> : <div style={{ width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:24 }}>{rp.emoji||'📦'}</div>}
-                    </div>
-                    <div style={{ padding:'5px 7px' }}>
-                      <div style={{ fontSize:10,fontWeight:700,color:'var(--ink1)',overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis' }}>{rp.name}</div>
-                      <div style={{ fontSize:11,fontWeight:900,color:'var(--ember)' }}>{rp.price.toLocaleString()} {currency}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Qty */}
           <div style={{ display:'flex',alignItems:'center',gap:12,marginBottom:20 }}>
             <div style={{ fontSize:11,fontWeight:700,color:'var(--ink3)' }}>الكمية</div>
@@ -359,10 +300,7 @@ function ProductModal({ p, cart, onClose, currency, userId }: { p:SProduct; cart
 /* Cart Sidebar */
 function CartSidebar({ cart, storeInfo, userId, onClose, onOrderSuccess }: { cart:ReturnType<typeof useCart>; storeInfo:StoreInfo; userId:string; onClose:()=>void; onOrderSuccess:(orderId:string)=>void }) {
   const [step, setStep] = useState<'cart'|'checkout'|'success'>('cart');
-  const [form, setForm] = useState({ name:'', phone:'', city:'', address:'', notes:'', subscribe:true, paymentMethod:'cod' as 'cod'|'virement' });
-  const [couponCode, setCouponCode] = useState('');
-  const [couponDiscount, setCouponDiscount] = useState(0);
-  const [couponMsg, setCouponMsg] = useState('');
+  const [form, setForm] = useState({ name:'', phone:'', city:'', address:'', notes:'', subscribe:true });
   const [citySearch, setCitySearch] = useState('');
   const [showCities, setShowCities] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -517,33 +455,6 @@ function CartSidebar({ cart, storeInfo, userId, onClose, onOrderSuccess }: { car
               <textarea className="glass-input" placeholder="ملاحظة للبائع (اختياري)" rows={2}
                 value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))}
                 style={{ resize:'none' }} />
-
-              {/* Payment method */}
-              <div>
-                <div style={{ fontSize:12,fontWeight:700,color:'var(--ink3)',marginBottom:8 }}>💳 طريقة الدفع</div>
-                <div style={{ display:'flex',gap:8 }}>
-                  {[['cod','💵 دفع عند الاستلام'],['virement','🏦 تحويل بنكي']].map(([v,l]) => (
-                    <button key={v} onClick={()=>setForm(f=>({...f,paymentMethod:v as any}))}
-                      style={{ flex:1,padding:'10px',borderRadius:10,border:`1.5px solid ${form.paymentMethod===v?'var(--ember)':'var(--border)'}`,background:form.paymentMethod===v?'rgba(255,77,26,.1)':'transparent',color:form.paymentMethod===v?'var(--ember2)':'var(--ink2)',fontSize:12,fontWeight:700,cursor:'pointer' }}>
-                      {l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Coupon code */}
-              <div>
-                <div style={{ fontSize:12,fontWeight:700,color:'var(--ink3)',marginBottom:8 }}>🏷️ كود الخصم (اختياري)</div>
-                <div style={{ display:'flex',gap:8 }}>
-                  <input className="glass-input" placeholder="أدخل كود الخصم" value={couponCode}
-                    onChange={e=>{setCouponCode(e.target.value.toUpperCase());setCouponMsg('');}}
-                    style={{ flex:1,textTransform:'uppercase' }} dir="ltr"/>
-                  <button onClick={applyCoupon} style={{ padding:'0 16px',borderRadius:10,background:'var(--void2)',border:'1px solid var(--border)',color:'var(--ink2)',fontSize:12,fontWeight:700,cursor:'pointer' }}>
-                    تطبيق
-                  </button>
-                </div>
-                {couponMsg && <div style={{ fontSize:11,marginTop:4,color:couponDiscount>0?'var(--mint)':'var(--ember)',fontWeight:700 }}>{couponMsg}</div>}
-              </div>
 
               <label style={{ display:'flex',alignItems:'center',gap:10,cursor:'pointer',fontSize:13,color:'var(--ink2)' }}>
                 <input type="checkbox" checked={form.subscribe} onChange={e=>setForm(f=>({...f,subscribe:e.target.checked}))} style={{ accentColor:'var(--ember)',width:16,height:16 }}/>
@@ -837,19 +748,12 @@ export default function Storefront() {
   })();
 
   const { products, storeInfo, loading, error } = useStorefront(userId);
-  // Expose products globally for related products in modal
-  useEffect(() => { (window as any).__sfProducts = products; }, [products]);
   const cart = useCart();
 
-  const [lang, setLang]          = useState<'ar'|'fr'>('ar');
-  const t = (ar: string, fr: string) => lang === 'ar' ? ar : fr;
   const [search,     setSearch]     = useState('');
   const [activeTab,  setActiveTab]  = useState('all');
   const [sortBy,     setSortBy]     = useState<'popular'|'newest'|'price-asc'|'price-desc'>('popular');
   const [viewProduct,setViewProduct]= useState<SProduct|null>(null);
-  const [viewMode, setViewMode]    = useState<'grid'|'list'>('grid');
-  const [priceMax, setPriceMax]    = useState(0); // 0 = no filter
-  const [showFilters,setShowFilters]=useState(false);
   const [showCart,   setShowCart]   = useState(false);
   const [showTrack,  setShowTrack]  = useState(false);
   const [cartAnim,   setCartAnim]   = useState(false);
@@ -865,8 +769,7 @@ export default function Storefront() {
 
   let filtered = products
     .filter(p => (activeTab==='all' || p.category===activeTab)
-      && (!search || p.name.includes(search) || p.description?.includes(search) || p.sku?.includes(search) || (p.colors||[]).some(cl=>cl.includes(search)))
-      && (priceMax === 0 || p.price <= priceMax));
+      && (!search || p.name.includes(search) || p.description?.includes(search) || p.sku?.includes(search)));
 
   if (sortBy === 'popular')    filtered = [...filtered].sort((a,b) => b.sales - a.sales);
   if (sortBy === 'newest')     filtered = [...filtered].sort((a,b) => new Date(b.createdAt||0).getTime() - new Date(a.createdAt||0).getTime());
@@ -993,21 +896,6 @@ export default function Storefront() {
             placeholder="ابحث بالاسم أو الكود..."
             value={search} onChange={e=>setSearch(e.target.value)} />
         </div>
-        {/* Trust badges */}
-        <div style={{ padding:'10px 16px',display:'flex',gap:10,overflowX:'auto',borderBottom:'1px solid var(--border)' }}>
-          {[
-            { icon:'🚚', text:'توصيل سريع 24-48h' },
-            { icon:'💵', text:'دفع عند الاستلام' },
-            { icon:'🔄', text:'إرجاع خلال 7 أيام' },
-            { icon:'🔒', text:'دفع آمن 100%' },
-            { icon:'⭐', text:'جودة مضمونة' },
-          ].map(b => (
-            <div key={b.text} style={{ display:'flex',alignItems:'center',gap:5,whiteSpace:'nowrap',fontSize:11,color:'var(--ink3)',fontWeight:600,padding:'5px 10px',borderRadius:99,background:'var(--void2)',border:'1px solid var(--border)',flexShrink:0 }}>
-              <span>{b.icon}</span><span>{b.text}</span>
-            </div>
-          ))}
-        </div>
-
         {/* Category tabs */}
         <div style={{ display:'flex',gap:8,overflowX:'auto',paddingBottom:4 }}>
           {categories.map(cat=>(
@@ -1024,11 +912,6 @@ export default function Storefront() {
       {/* ── SORT ─────────────────────────────── */}
       <div style={{ padding:'0 16px',marginBottom:16,display:'flex',alignItems:'center',justifyContent:'space-between' }}>
         <span style={{ fontSize:12,color:'var(--ink3)',fontWeight:600 }}>{filtered.length} منتج</span>
-        {/* View mode toggle */}
-        <div style={{ display:'flex',gap:3,background:'var(--void2)',border:'1px solid var(--border)',borderRadius:8,padding:3 }}>
-          <button onClick={()=>setViewMode('grid')} style={{ width:28,height:26,borderRadius:6,border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',background:viewMode==='grid'?'var(--panel)':'transparent',color:viewMode==='grid'?'var(--ember)':'var(--ink3)',fontSize:14 }}>⊞</button>
-          <button onClick={()=>setViewMode('list')} style={{ width:28,height:26,borderRadius:6,border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',background:viewMode==='list'?'var(--panel)':'transparent',color:viewMode==='list'?'var(--ember)':'var(--ink3)',fontSize:14 }}>≡</button>
-        </div>
         <select value={sortBy} onChange={e=>setSortBy(e.target.value as typeof sortBy)}
           style={{ background:'var(--panel)',border:'1px solid var(--border)',borderRadius:8,padding:'5px 10px',color:'var(--ink2)',fontSize:12,cursor:'pointer',outline:'none' }}>
           <option value="popular">الأكثر طلباً</option>
@@ -1039,38 +922,7 @@ export default function Storefront() {
       </div>
 
       {/* ── PRODUCTS GRID ───────────────────── */}
-      {/* Featured / Most Popular — show only on 'all' tab with no search */}
-      {activeTab === 'all' && !search && filtered.length > 0 && (() => {
-        const popular = [...filtered].sort((a,b)=>(b.sales||0)-(a.sales||0)).slice(0,3).filter(p=>(p.sales||0)>0);
-        if (popular.length < 2) return null;
-        return (
-          <div style={{ padding:'0 16px 16px' }}>
-            <div style={{ fontSize:12,fontWeight:800,color:'var(--ink3)',marginBottom:10,letterSpacing:'.06em' }}>🔥 الأكثر طلباً</div>
-            <div style={{ display:'flex',gap:10,overflowX:'auto',paddingBottom:4 }}>
-              {popular.map(p => (
-                <div key={p.id} onClick={()=>setViewProduct(p)}
-                  style={{ flexShrink:0,width:240,borderRadius:16,overflow:'hidden',cursor:'pointer',background:'var(--panel)',border:'1px solid rgba(255,77,26,.2)',boxShadow:'0 4px 20px rgba(255,77,26,.1)',transition:'all .2s' }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform='translateY(-3px)';(e.currentTarget as HTMLElement).style.borderColor='rgba(255,77,26,.5)';}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform='';(e.currentTarget as HTMLElement).style.borderColor='rgba(255,77,26,.2)';}}>
-                  <div style={{ height:120,position:'relative',background:p.imageUrl?'#000':'var(--void2)',overflow:'hidden' }}>
-                    {p.imageUrl ? <img src={p.imageUrl} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} loading="lazy"/> : <div style={{ width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:40 }}>{p.emoji||'📦'}</div>}
-                    <span style={{ position:'absolute',top:8,right:8,background:'rgba(255,77,26,.9)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>🔥 #{popular.indexOf(p)+1}</span>
-                  </div>
-                  <div style={{ padding:'10px 12px',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
-                    <div>
-                      <div style={{ fontSize:12,fontWeight:800,color:'var(--ink1)' }}>{p.name}</div>
-                      <div style={{ fontSize:10,color:'var(--ink3)' }}>{p.sales||0} طلب</div>
-                    </div>
-                    <div style={{ fontSize:16,fontWeight:900,color:'var(--ember)' }}>{p.price.toLocaleString()} {cur}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
-
-      <div style={{ padding:'0 16px 120px',display:viewMode==='list'?'flex':'grid', flexDirection:viewMode==='list'?'column':'row', gridTemplateColumns:viewMode==='grid'?'repeat(auto-fill,minmax(160px,1fr))':'none', gap:viewMode==='list'?10:14 }}>
+      <div style={{ padding:'0 16px 120px',display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:14 }}>
         {filtered.map(p => (
           <ProductCard key={p.id} p={p} currency={cur}
             onAdd={handleAddToCart}

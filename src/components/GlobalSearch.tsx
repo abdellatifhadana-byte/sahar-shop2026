@@ -1,191 +1,119 @@
 import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store';
-import { Search, Package, ShoppingCart, Users, MessageCircle, X, Settings, Zap, ArrowLeft } from 'lucide-react';
+import { Search, Package, ShoppingCart, Users, X } from 'lucide-react';
 import type { Page } from '../types';
 
 interface Result {
-  type: 'product'|'order'|'customer'|'conversation'|'page';
+  type: 'product' | 'order' | 'customer';
   id: string;
   title: string;
   subtitle: string;
-  meta?: string;
   page: Page;
-  action?: () => void;
 }
 
-const PAGES: {q:string[];label:string;page:Page;icon:any;desc:string}[] = [
-  { q:['dashboard','الرئيسية','لوحة'],label:'لوحة التحكم',page:'dashboard',icon:Zap,desc:'الإحصائيات والتقارير' },
-  { q:['products','منتجات','إضافة منتج'],label:'المنتجات',page:'products',icon:Package,desc:'إدارة المنتجات والمخزون' },
-  { q:['orders','طلبات','kanban'],label:'الطلبات',page:'orders',icon:ShoppingCart,desc:'إدارة وتتبع الطلبات' },
-  { q:['messages','رسائل','محادثات'],label:'الرسائل',page:'conversations',icon:MessageCircle,desc:'محادثات الزبائن + AI' },
-  { q:['customers','زبائن','clients'],label:'الزبائن',page:'customers',icon:Users,desc:'CRM وإدارة الزبائن' },
-  { q:['settings','إعدادات'],label:'الإعدادات',page:'settings',icon:Settings,desc:'إعدادات المتجر' },
-];
-
 export default function GlobalSearch({ onClose }: { onClose: () => void }) {
-  const { products, orders, customers, conversations, settings, setPage } = useStore();
+  const { products, orders, customers, settings, setPage } = useStore();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Result[]>([]);
-  const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const cur = settings.brand?.currency || 'MAD';
+  const currency = settings.brand.currency;
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
   useEffect(() => {
-    const q = query.toLowerCase().trim();
-    if (!q) { setResults([]); setSelected(0); return; }
+    if (!query.trim()) { setResults([]); return; }
+    const q = query.toLowerCase();
     const res: Result[] = [];
 
-    // Pages
-    PAGES.filter(p => p.q.some(kw => kw.includes(q) || q.includes(kw))).forEach(p => {
-      res.push({ type:'page', id:p.page, title:p.label, subtitle:p.desc, page:p.page });
+    // Products
+    products.filter(p => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q)).slice(0, 4).forEach(p => {
+      res.push({ type: 'product', id: p.id, title: `${p.emoji} ${p.name}`, subtitle: `${p.price} ${currency} · ${p.category}`, page: 'products' });
     });
 
-    // Products — search name, category, SKU, description, color
-    products.filter(p =>
-      p.name.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q) ||
-      p.sku?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q) ||
-      (p.colors||[]).some((c:string) => c.toLowerCase().includes(q))
-    ).slice(0,5).forEach(p => {
-      res.push({
-        type:'product', id:p.id,
-        title:`${p.emoji||'📦'} ${p.name}`,
-        subtitle:`${p.price.toLocaleString()} ${cur} · ${p.category||'—'}`,
-        meta: p.stock <= 3 ? '⚠️ مخزون منخفض' : p.status === 'published' ? '✅ منشور' : '📝 مسودة',
-        page:'products'
-      });
+    // Orders
+    orders.filter(o => o.customerName.includes(q) || o.id.includes(q) || o.city.includes(q)).slice(0, 4).forEach(o => {
+      res.push({ type: 'order', id: o.id, title: `${o.id} — ${o.customerName}`, subtitle: `${o.total} ${currency} · ${o.city}`, page: 'orders' });
     });
 
-    // Orders — search ID, name, phone, city, status
-    orders.filter(o =>
-      o.id.toLowerCase().includes(q) || o.customerName.toLowerCase().includes(q) ||
-      o.customerPhone?.includes(q) || o.city?.toLowerCase().includes(q) ||
-      o.status?.toLowerCase().includes(q) || (o as any).customerCode?.toLowerCase().includes(q)
-    ).slice(0,5).forEach(o => {
-      const STATUS: Record<string,string> = { pending:'⏳', approved:'✅', shipped:'🚚', delivered:'📦', cancelled:'❌' };
-      res.push({
-        type:'order', id:o.id,
-        title:`${STATUS[o.status]||'🔖'} ${o.id} — ${o.customerName}`,
-        subtitle:`${o.total?.toLocaleString()} ${cur} · ${o.city||'—'}`,
-        meta: o.customerPhone,
-        page:'orders'
-      });
+    // Customers
+    customers.filter(c => c.name.includes(q) || c.phone.includes(q) || c.city.includes(q)).slice(0, 4).forEach(c => {
+      res.push({ type: 'customer', id: c.id, title: c.name, subtitle: `${c.phone} · ${c.city}`, page: 'customers' });
     });
 
-    // Customers — name, phone, city, email
-    customers.filter(c =>
-      c.name.toLowerCase().includes(q) || c.phone?.includes(q) ||
-      c.city?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q) ||
-      c.address?.toLowerCase().includes(q)
-    ).slice(0,4).forEach(c => {
-      res.push({
-        type:'customer', id:c.id,
-        title:`${c.vip?'⭐':'👤'} ${c.name}`,
-        subtitle:`${c.phone||'—'} · ${c.city||'—'}`,
-        meta: `${c.totalOrders||0} طلب`,
-        page:'customers'
-      });
-    });
+    setResults(res.slice(0, 10));
+  }, [query, products, orders, customers, currency]);
 
-    // Conversations — name, phone, last message
-    conversations.filter((cv:any) =>
-      cv.customerName?.toLowerCase().includes(q) || cv.customerPhone?.includes(q) ||
-      cv.lastMessage?.toLowerCase().includes(q)
-    ).slice(0,3).forEach((cv:any) => {
-      res.push({
-        type:'conversation', id:cv.id,
-        title:`💬 ${cv.customerName}`,
-        subtitle:cv.lastMessage?.slice(0,60)||'—',
-        meta:cv.source,
-        page:'conversations'
-      });
-    });
-
-    setResults(res.slice(0,12));
-    setSelected(0);
-  }, [query, products, orders, customers, conversations, cur]);
-
-  const go = (r: Result) => { r.action?.(); setPage(r.page); onClose(); };
-
-  const TYPE_ICON: Record<string,any> = { product:Package, order:ShoppingCart, customer:Users, conversation:MessageCircle, page:Zap };
-  const TYPE_COLOR: Record<string,string> = { product:'#a78bfa', order:'#60a5fa', customer:'#34d399', conversation:'#fbbf24', page:'#FF4D1A' };
-  const TYPE_LABEL: Record<string,string> = { product:'منتج', order:'طلب', customer:'زبون', conversation:'رسالة', page:'صفحة' };
+  const icons = { product: Package, order: ShoppingCart, customer: Users };
+  const colors = { product: 'text-indigo-400', order: 'text-blue-400', customer: 'text-emerald-400' };
 
   return (
-    <div onClick={onClose} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,.7)',backdropFilter:'blur(8px)',zIndex:500,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'10vh 16px 0' }}>
-      <div onClick={e=>e.stopPropagation()} style={{ width:'100%',maxWidth:580,borderRadius:20,overflow:'hidden',background:'var(--panel)',border:'1px solid rgba(255,255,255,.1)',boxShadow:'0 24px 80px rgba(0,0,0,.6)' }}>
+    <div className="modal-overlay" onClick={onClose}>
+      <div style={{ position: 'fixed', top: '10%', left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 540, padding: '0 16px', zIndex: 300 }}
+        onClick={e => e.stopPropagation()}>
+        <div className="card overflow-hidden anim-scale-in">
+          {/* Search input */}
+          <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: 'var(--border)' }}>
+            <Search className="w-5 h-5 text-muted flex-shrink-0" />
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="ابحث في المنتجات، الطلبات، الزبائن..."
+              className="flex-1 bg-transparent border-0 text-primary text-base outline-none placeholder:text-muted"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Escape') onClose();
+                if (e.key === 'Enter' && results.length > 0) { setPage(results[0].page); onClose(); }
+              }}
+              dir="rtl"
+            />
+            <button onClick={onClose} className="text-muted hover:text-secondary">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
 
-        {/* Search input */}
-        <div style={{ display:'flex',alignItems:'center',gap:12,padding:'14px 16px',borderBottom:'1px solid var(--border)' }}>
-          <Search size={18} style={{ color:'var(--ink3)',flexShrink:0 }}/>
-          <input ref={inputRef} value={query} onChange={e=>setQuery(e.target.value)}
-            placeholder="ابحث عن منتج، طلب، زبون، رقم هاتف..."
-            style={{ flex:1,background:'transparent',border:'none',color:'var(--ink1)',fontSize:15,outline:'none',direction:'rtl' }}
-            onKeyDown={e => {
-              if (e.key==='Escape') onClose();
-              if (e.key==='ArrowDown') { e.preventDefault(); setSelected(s=>Math.min(s+1,results.length-1)); }
-              if (e.key==='ArrowUp') { e.preventDefault(); setSelected(s=>Math.max(s-1,0)); }
-              if (e.key==='Enter' && results[selected]) go(results[selected]);
-            }}
-          />
-          {query && <button onClick={()=>setQuery('')} style={{ background:'none',border:'none',color:'var(--ink3)',cursor:'pointer',display:'flex' }}><X size={15}/></button>}
-          <button onClick={onClose} style={{ background:'var(--void2)',border:'1px solid var(--border)',borderRadius:7,color:'var(--ink3)',cursor:'pointer',fontSize:11,padding:'3px 8px' }}>ESC</button>
-        </div>
-
-        {/* Results */}
-        {results.length > 0 ? (
-          <div style={{ maxHeight:'60vh',overflowY:'auto' }}>
-            {results.map((r, i) => {
-              const Icon = TYPE_ICON[r.type];
-              const color = TYPE_COLOR[r.type];
-              return (
-                <button key={`${r.type}-${r.id}`} onClick={()=>go(r)}
-                  style={{ width:'100%',display:'flex',alignItems:'center',gap:12,padding:'11px 16px',border:'none',background:selected===i?'rgba(255,255,255,.06)':'transparent',cursor:'pointer',borderBottom:'1px solid var(--border)',textAlign:'right',transition:'background .1s' }}
-                  onMouseEnter={()=>setSelected(i)}>
-                  <div style={{ width:32,height:32,borderRadius:9,background:`${color}18`,border:`1px solid ${color}35`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,color }}>
-                    <Icon size={15}/>
-                  </div>
-                  <div style={{ flex:1,minWidth:0 }}>
-                    <div style={{ fontSize:13,fontWeight:700,color:'var(--ink1)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{r.title}</div>
-                    <div style={{ fontSize:11,color:'var(--ink3)',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{r.subtitle}</div>
-                  </div>
-                  <div style={{ display:'flex',gap:6,alignItems:'center',flexShrink:0 }}>
-                    {r.meta && <span style={{ fontSize:10,color:'var(--ink3)' }} dir="ltr">{r.meta}</span>}
-                    <span style={{ fontSize:10,padding:'2px 7px',borderRadius:99,background:`${color}18`,color,fontWeight:700,border:`1px solid ${color}30` }}>
-                      {TYPE_LABEL[r.type]}
+          {/* Results */}
+          {results.length > 0 ? (
+            <div className="max-h-80 overflow-y-auto">
+              {results.map((r, i) => {
+                const Icon = icons[r.type];
+                return (
+                  <button key={`${r.type}-${r.id}`} onClick={() => { setPage(r.page); onClose(); }}
+                    className={`w-full text-right flex items-center gap-3 px-4 py-3 hover:bg-card transition-all ${i > 0 ? 'border-t' : ''}`}
+                    style={{ borderColor: 'var(--border)' }}>
+                    <Icon className={`w-4 h-4 flex-shrink-0 ${colors[r.type]}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-primary text-sm font-semibold truncate">{r.title}</p>
+                      <p className="text-muted text-xs truncate">{r.subtitle}</p>
+                    </div>
+                    <span className="text-muted text-xs flex-shrink-0 badge" style={{ background: 'var(--bg-input)', border: '1px solid var(--border)' }}>
+                      {r.type === 'product' ? 'منتج' : r.type === 'order' ? 'طلب' : 'زبون'}
                     </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        ) : query.trim() ? (
-          <div style={{ padding:'32px 16px',textAlign:'center',color:'var(--ink3)',fontSize:14 }}>
-            لا نتائج لـ "{query}"
-          </div>
-        ) : (
-          <div style={{ padding:'16px' }}>
-            <div style={{ fontSize:11,color:'var(--ink3)',fontWeight:700,marginBottom:10,letterSpacing:'.06em' }}>البحث السريع</div>
-            <div style={{ display:'flex',flexWrap:'wrap',gap:7 }}>
+                  </button>
+                );
+              })}
+            </div>
+          ) : query.trim() ? (
+            <div className="py-10 text-center text-muted text-sm">لا نتائج لـ "{query}"</div>
+          ) : (
+            <div className="p-4 space-y-1">
+              <p className="text-muted text-xs font-bold mb-2">بحث سريع في:</p>
               {[
-                { label:'📦 المنتجات', page:'products' as Page },
-                { label:'🛒 الطلبات', page:'orders' as Page },
-                { label:'👥 الزبائن', page:'customers' as Page },
-                { label:'💬 الرسائل', page:'conversations' as Page },
-                { label:'📊 التحليلات', page:'analytics' as Page },
-              ].map(s => (
-                <button key={s.page} onClick={()=>{setPage(s.page);onClose();}}
-                  style={{ padding:'6px 14px',borderRadius:99,background:'var(--void2)',border:'1px solid var(--border)',color:'var(--ink2)',fontSize:12,fontWeight:600,cursor:'pointer' }}>
-                  {s.label}
-                </button>
+                { icon: Package, label: 'المنتجات', color: 'text-indigo-400' },
+                { icon: ShoppingCart, label: 'الطلبات', color: 'text-blue-400' },
+                { icon: Users, label: 'الزبائن', color: 'text-emerald-400' },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-2 px-2 py-1.5 text-muted text-sm">
+                  <item.icon className={`w-4 h-4 ${item.color}`} />
+                  {item.label}
+                </div>
               ))}
+              <p className="text-muted text-xs mt-3 pt-3 border-t text-center" style={{ borderColor: 'var(--border)' }}>
+                اضغط ESC للإغلاق · Enter للاختيار الأول
+              </p>
             </div>
-            <div style={{ marginTop:14,fontSize:11,color:'var(--ink3)',textAlign:'center' }}>
-              ⬆⬇ للتنقل · Enter للاختيار · ESC للإغلاق
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
