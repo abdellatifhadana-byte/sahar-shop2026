@@ -248,21 +248,19 @@ export default function DashboardPage() {
       {/* 3 KPI cards */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
         {stats.slice(1).map((s,i)=>(
-          <button key={i} onClick={()=>setPage(s.page)} style={{
-            background:s.alert?`rgba(255,77,26,.06)`:'var(--panel)',
-            border:`1px solid ${s.alert?'rgba(255,77,26,.25)':'var(--border)'}`,
-            borderRadius:'var(--r)',padding:'14px 14px',cursor:'pointer',
-            transition:'all var(--mid)',textAlign:'right',
-          }}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:8}}>
-              <s.icon size={15} style={{color:s.alert?'var(--ember2)':'var(--ink3)',marginTop:1}} />
-              <span style={{fontSize:10,color:'var(--ink3)'}}>{s.label}</span>
+          <button key={i} onClick={()=>setPage(s.page)} className="kpi-card"
+            style={{ border: s.alert ? '1px solid rgba(255,77,26,.3)' : undefined,
+              background: s.alert ? 'rgba(255,77,26,.05)' : undefined }}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+              <div style={{width:28,height:28,borderRadius:8,background:s.alert?'rgba(255,77,26,.1)':'rgba(255,255,255,.05)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <s.icon size={14} style={{color:s.alert?'var(--ember)':'var(--ink3)'}}/>
+              </div>
+              <span className="section-title">{s.label}</span>
             </div>
-            <div style={{fontSize:22,fontWeight:900,letterSpacing:'-0.03em',
-              color:s.alert?'var(--ember2)':'var(--ink1)',lineHeight:1}}>
+            <div className="num-lg" style={{color:s.alert?'var(--ember)':'var(--ink1)',marginBottom:4}}>
               {s.value}
             </div>
-            <div style={{fontSize:10,color:'var(--ink3)',marginTop:5}}>{s.sub}</div>
+            {s.sub && <div style={{fontSize:10,color:s.alert?'rgba(255,77,26,.6)':'var(--ink3)',marginTop:2}}>{s.sub}</div>}
           </button>
         ))}
       </div>

@@ -192,7 +192,26 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     if (!state.isOnline || !state.user?.id) return;
     api.connectWS(state.user.id);
     const offOrder = api.onWS('order_created', (data) => {
-      setState(s => ({ ...s, orders: [data, ...s.orders.filter(o => o.id !== data.id)] }));
+      setState(s => {
+        // Auto-create conversation if customer doesn't exist
+        const existsConv = s.conversations.some((cv: any) => cv.customerPhone === data.customerPhone);
+        const newConvs = (!existsConv && data.customerPhone)
+          ? [{
+              id: `CONV-${Date.now()}`,
+              customerId: `C${Date.now()}`,
+              customerName: data.customerName,
+              customerPhone: data.customerPhone,
+              source: 'WhatsApp' as const,
+              status: 'active',
+              lastMessage: `🛒 طلب جديد: ${data.id}`,
+              unread: 1,
+              pinned: false,
+              messages: [],
+              createdAt: new Date().toISOString(),
+            }]
+          : [];
+        return { ...s, orders: [data, ...s.orders.filter(o => o.id !== data.id)], conversations: [...newConvs, ...s.conversations] };
+      });
       notify('info', `🛒 طلب جديد من ${data.customerName}`);
       try { Sounds.newOrder(); } catch {}
     });

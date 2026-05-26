@@ -420,7 +420,13 @@ export default function OrdersPage() {
           {filtered.length === 0 && (
             <div className="card" style={{ padding: '60px 24px', textAlign: 'center' }}>
               <span style={{ fontSize: 48, opacity: .3, display: 'block', marginBottom: 10 }}>🛒</span>
-              <p style={{ color: 'var(--txt-2)', fontWeight: 700 }}>لا توجد طلبات</p>
+              <div className="empty-state" style={{ padding: '32px 16px' }}>
+                <div className="empty-state-icon">🛒</div>
+                <div>
+                  <p className="empty-state-title">لا توجد طلبات بعد</p>
+                  <p className="empty-state-sub">شارك رابط متجرك مع زبائنك لاستقبال أول طلب</p>
+                </div>
+              </div>
             </div>
           )}
         </div>

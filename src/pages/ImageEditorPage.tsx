@@ -15,11 +15,13 @@ const EXPORT_SIZES: ExportSize[] = [
 const STICKERS = ['🔥','⭐','💎','🎉','✅','🚚','🏷️','💯','🤑','📦','🇲🇦','❤️'];
 
 export default function ImageEditorPage() {
-  const { settings, products } = useStore();
+  const { settings, products, notify } = useStore();
   const canvasRef  = useRef<HTMLCanvasElement>(null);
   const fileRef    = useRef<HTMLInputElement>(null);
   const logoRef    = useRef<HTMLInputElement>(null);
-  const [bg, setBg]         = useState<string>('');
+  const [bg,          setBg]          = useState<string>(() => {
+    try { return sessionStorage.getItem('sahar_editor_image') || ''; } catch { return ''; }
+  });
   const [layers, setLayers] = useState<Layer[]>([]);
   const [selected,setSelected] = useState<string|null>(null);
   const [exportSize,setExportSize] = useState<ExportSize>(EXPORT_SIZES[1]);
@@ -72,6 +74,51 @@ export default function ImageEditorPage() {
 
   // Trigger initial draw on mount
   useEffect(() => { draw(); }, [draw]);
+
+  // Handle action from ProductsPage (logo/name overlay)
+  useEffect(() => {
+    const action = sessionStorage.getItem('editor_action');
+    const storeName = sessionStorage.getItem('editor_store_name') || settings.brand.name || 'SAHAR shop';
+    if (!action) return;
+    sessionStorage.removeItem('editor_action');
+    sessionStorage.removeItem('editor_store_name');
+    
+    if (action === 'logo') {
+      // Add Sahar logo as overlay
+      setTimeout(() => {
+        const logoImg = new window.Image();
+        logoImg.crossOrigin = 'anonymous';
+        logoImg.onload = () => {
+          const canvas2 = document.createElement('canvas');
+          canvas2.width = logoImg.width; canvas2.height = logoImg.height;
+          canvas2.getContext('2d')?.drawImage(logoImg, 0, 0);
+          setLayers(l => [...l, {
+            id: Math.random().toString(36).slice(2),
+            type: 'logo',
+            content: canvas2.toDataURL(),
+            x: 90, y: 10,
+            size: 80,
+          }]);
+        };
+        logoImg.src = settings.brand.logo || '/sahar-logo-text.png';
+      }, 500);
+    }
+    
+    if (action === 'name') {
+      // Add store name as text overlay
+      setTimeout(() => {
+        setLayers(l => [...l, {
+          id: Math.random().toString(36).slice(2),
+          type: 'text',
+          content: storeName,
+          x: 50, y: 90,
+          size: 32,
+          color: '#FF4D1A',
+          opacity: 1,
+        }]);
+      }, 300);
+    }
+  }, []);
 
   function drawLayers(ctx: CanvasRenderingContext2D) {
     layers.forEach(layer => {

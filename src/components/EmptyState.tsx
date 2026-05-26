@@ -1,19 +1,29 @@
-import { type ReactNode } from 'react';
-
 interface EmptyStateProps {
-  emoji?: string;
+  icon: string;
   title: string;
   subtitle?: string;
-  action?: ReactNode;
+  action?: { label: string; onClick: () => void };
+  hint?: string;
 }
 
-export default function EmptyState({ emoji = '📭', title, subtitle, action }: EmptyStateProps) {
+export default function EmptyState({ icon, title, subtitle, action, hint }: EmptyStateProps) {
   return (
-    <div className="py-16 text-center">
-      <div className="text-5xl mb-4">{emoji}</div>
-      <h3 className="text-secondary font-bold text-lg mb-2">{title}</h3>
-      {subtitle && <p className="text-muted text-sm mb-5 max-w-xs mx-auto leading-relaxed">{subtitle}</p>}
-      {action && <div className="flex justify-center">{action}</div>}
+    <div className="empty-state">
+      <div className="empty-state-icon" style={{ fontSize: 32 }}>{icon}</div>
+      <div>
+        <p className="empty-state-title">{title}</p>
+        {subtitle && <p className="empty-state-sub" style={{ marginTop: 6 }}>{subtitle}</p>}
+        {hint && (
+          <p style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 8, padding: '6px 12px', background: 'rgba(255,255,255,.04)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', display: 'inline-block' }}>
+            💡 {hint}
+          </p>
+        )}
+      </div>
+      {action && (
+        <button onClick={action.onClick} className="btn btn-primary" style={{ marginTop: 4 }}>
+          {action.label}
+        </button>
+      )}
     </div>
   );
 }

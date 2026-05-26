@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { Send, Bot, Plus, Sparkles, X, Pin, ShoppingCart } from 'lucide-react';
 import * as api from '../services/api';
@@ -81,13 +81,24 @@ export default function MessagesPage() {
     setAiThinking(false);
   };
 
-  const newConv = async () => {
-    const srcs = ['WhatsApp', 'Instagram', 'Messenger'] as const;
-    const names = ['محمد ال.', 'فاطمة ز.', 'يوسف م.', 'أمينة ب.', 'خالد ع.'];
-    const src = srcs[Math.floor(Math.random() * srcs.length)];
-    const name = names[Math.floor(Math.random() * names.length)];
-    const id = await addConversation({ customerId: `C${Date.now()}`, customerName: name, source: src, status: 'active', lastMessage: '' });
+  const [showNewConv, setShowNewConv] = React.useState(false);
+  const [newConvForm, setNewConvForm] = React.useState({ name:'', phone:'', source:'WhatsApp' as const });
+
+  const newConv = () => setShowNewConv(true);
+
+  const createConv = async () => {
+    if (!newConvForm.name.trim()) { notify('error', 'أدخل اسم الزبون'); return; }
+    const id = await addConversation({
+      customerId: `C${Date.now()}`,
+      customerName: newConvForm.name.trim(),
+      customerPhone: newConvForm.phone.trim(),
+      source: newConvForm.source,
+      status: 'active',
+      lastMessage: '',
+    });
     setActive(id);
+    setShowNewConv(false);
+    setNewConvForm({ name:'', phone:'', source:'WhatsApp' });
   };
 
   const filtered = conversations
@@ -97,6 +108,48 @@ export default function MessagesPage() {
   return (
     <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <style>{`@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}`}</style>
+
+      {/* ── New Conversation Modal ── */}
+      {showNewConv && (
+        <div onClick={() => setShowNewConv(false)} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,.65)',backdropFilter:'blur(8px)',zIndex:500,display:'flex',alignItems:'center',justifyContent:'center',padding:16 }}>
+          <div onClick={e=>e.stopPropagation()} style={{ width:'100%',maxWidth:400,background:'var(--panel)',border:'1px solid var(--border2)',borderRadius:24,padding:24,boxShadow:'0 20px 60px rgba(0,0,0,.5)' }}>
+            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20 }}>
+              <h3 style={{ fontSize:16,fontWeight:900,color:'var(--ink1)' }}>💬 محادثة جديدة</h3>
+              <button onClick={()=>setShowNewConv(false)} style={{ width:28,height:28,borderRadius:8,background:'rgba(255,255,255,.06)',border:'1px solid var(--border)',color:'var(--ink3)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14 }}>×</button>
+            </div>
+            <div style={{ display:'flex',flexDirection:'column',gap:12 }}>
+              <div>
+                <label className="label" style={{ marginBottom:5,display:'block' }}>اسم الزبون *</label>
+                <input className="input" placeholder="مثال: محمد العلوي" value={newConvForm.name}
+                  onChange={e=>setNewConvForm(f=>({...f,name:e.target.value}))}
+                  onKeyDown={e=>e.key==='Enter'&&createConv()} autoFocus/>
+              </div>
+              <div>
+                <label className="label" style={{ marginBottom:5,display:'block' }}>رقم الهاتف</label>
+                <input className="input" placeholder="06XXXXXXXX" value={newConvForm.phone}
+                  onChange={e=>setNewConvForm(f=>({...f,phone:e.target.value}))} dir="ltr"/>
+              </div>
+              <div>
+                <label className="label" style={{ marginBottom:5,display:'block' }}>المصدر</label>
+                <div style={{ display:'flex',gap:6 }}>
+                  {(['WhatsApp','Instagram','Messenger','مباشر'] as const).map(src=>(
+                    <button key={src} onClick={()=>setNewConvForm(f=>({...f,source:src as any}))}
+                      style={{ flex:1,padding:'8px 6px',borderRadius:9,fontSize:11,fontWeight:700,cursor:'pointer',border:`1.5px solid ${newConvForm.source===src?'var(--ember)':'var(--border)'}`,background:newConvForm.source===src?'var(--ember-soft)':'transparent',color:newConvForm.source===src?'var(--ember)':'var(--ink3)' }}>
+                      {src==='WhatsApp'?'💬':src==='Instagram'?'📸':src==='Messenger'?'🔵':'👤'} {src}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display:'flex',gap:8,marginTop:4 }}>
+                <button onClick={()=>setShowNewConv(false)} className="btn btn-ghost" style={{ flex:1 }}>إلغاء</button>
+                <button onClick={createConv} className="btn btn-primary" style={{ flex:2,justifyContent:'center' }}>
+                  إنشاء المحادثة
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
@@ -128,7 +181,7 @@ export default function MessagesPage() {
               <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--ink3)' }}>
                 <Bot size={36} style={{ marginBottom: 8, opacity: .3 }} />
                 <p style={{ fontSize: 13 }}>لا محادثات</p>
-                <button onClick={newConv} className="btn btn-ghost btn-sm" style={{ marginTop: 12 }}>ابدأ محادثة تجريبية</button>
+                <button onClick={newConv} className="btn btn-ghost btn-sm" style={{ marginTop: 12 }}>ابدأ محادثة جديدة</button>
               </div>
             )}
             {filtered.map(c => (

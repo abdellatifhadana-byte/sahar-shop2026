@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useRef } from 'react';
 import { useStore } from '../store';
 import { Plus, Search, X, Camera, Trash2, Edit3, Check, SlidersHorizontal, ArrowUpDown } from 'lucide-react';
@@ -24,8 +25,20 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   );
 }
 
-function ProductForm({ product, onClose }: { product?: Product; onClose: () => void }) {
-  const { addProduct, updateProduct, settings, notify } = useStore();
+function ProductForm({ product, onClose, onNavigate }: { product?: Product; onClose: () => void; onNavigate?: (page: string) => void }) {
+  const { addProduct, updateProduct, settings, notify, setPage } = useStore();
+  // Detect category type for dynamic fields
+  const getCatType = (cat: string) => {
+    const lo = cat.toLowerCase();
+    if (lo.includes('رجال') || lo.includes('نساء') || lo.includes('ملابس') || lo.includes('قميص') || lo.includes('بنطال') || lo.includes('فستان') || lo.includes('جاكيت') || lo.includes('hoodie')) return 'clothing';
+    if (lo.includes('حذاء') || lo.includes('أحذية') || lo.includes('shoes')) return 'shoes';
+    if (lo.includes('إكسسوار') || lo.includes('حقيبة') || lo.includes('ساعة') || lo.includes('مجوهر') || lo.includes('نظارة')) return 'accessory';
+    if (lo.includes('أطفال') || lo.includes('بيبي') || lo.includes('طفل')) return 'children';
+    if (lo.includes('منزل') || lo.includes('ديكور') || lo.includes('أثاث') || lo.includes('مطبخ')) return 'home';
+    if (lo.includes('رياضة') || lo.includes('sport') || lo.includes('gym')) return 'sport';
+    return 'general';
+  };
+
   const [form, setForm] = useState({
     name: product?.name ?? '',
     description: product?.description ?? '',
@@ -43,9 +56,33 @@ function ProductForm({ product, onClose }: { product?: Product; onClose: () => v
     ageRange: product?.ageRange ?? '',
     sizeType: (product as any)?.sizeType ?? 'adult',
     colorImages: (product as any)?.colorImages ?? {},
+    // Smart extra fields
+    brand: (product as any)?.brand ?? '',
+    material: (product as any)?.material ?? '',
+    gender: (product as any)?.gender ?? '',
+    season: (product as any)?.season ?? '',
+    dimensions: (product as any)?.dimensions ?? '',
+    oldPrice: (product as any)?.oldPrice?.toString() ?? '',
   });
+
+  const catType = getCatType(form.category);
   const [imgTab, setImgTab] = useState<'photo' | 'emoji'>('photo');
+  const [step, setStep] = useState(1);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const STEPS = [
+    { n: 1, label: 'الأساسي', icon: '📝' },
+    { n: 2, label: 'الصور',   icon: '📸' },
+    { n: 3, label: 'السعر',   icon: '💰' },
+    { n: 4, label: 'التفاصيل',icon: '🏷️' },
+    { n: 5, label: 'النشر',   icon: '✅' },
+  ];
+
+  const canNext = () => {
+    if (step === 1) return !!(form.name.trim() && form.category);
+    if (step === 3) return !!(form.price && parseFloat(form.price) > 0);
+    return true;
+  };
 
   const tog = (arr: string[], val: string) => arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
 
@@ -67,7 +104,10 @@ function ProductForm({ product, onClose }: { product?: Product; onClose: () => v
       emoji: form.emoji, imageUrl: form.imageUrl, images: form.images, 
       isForChildren: form.isForChildren, ageRange: form.ageRange,
       sizeType: (form as any).sizeType,
-      colorImages: (form as any).colorImages || {}
+      colorImages: (form as any).colorImages || {},
+      brand: form.brand, material: form.material, gender: form.gender,
+      season: form.season, dimensions: form.dimensions,
+      oldPrice: parseFloat((form as any).oldPrice) || 0,
     };
     if (product) updateProduct(product.id, d); else addProduct(d);
     onClose();
@@ -82,8 +122,44 @@ function ProductForm({ product, onClose }: { product?: Product; onClose: () => v
   );
 
   return (
-    <div style={{ padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', gap: 18, maxHeight: '75vh', overflowY: 'auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '82vh' }}>
+      {/* Step indicator */}
+      <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          {STEPS.map((s, i) => (
+            <React.Fragment key={s.n}>
+              <button
+                onClick={() => { if (s.n < step || (s.n === step + 1 && canNext())) setStep(s.n); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '5px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
+                  cursor: 'pointer', border: 'none', transition: 'all .15s',
+                  background: step === s.n ? 'var(--ember)' : step > s.n ? 'rgba(0,210,179,.12)' : 'rgba(255,255,255,.05)',
+                  color: step === s.n ? '#fff' : step > s.n ? 'var(--mint)' : 'var(--ink3)',
+                }}>
+                <span>{step > s.n ? '✓' : s.icon}</span>
+                <span style={{ display: 'none' }} className="step-label">{s.label}</span>
+              </button>
+              {i < STEPS.length - 1 && (
+                <div style={{ flex: 1, height: 2, borderRadius: 1, background: step > s.n ? 'var(--mint)' : 'var(--border)', transition: 'background .3s' }}/>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink2)', marginTop: 8 }}>
+          {STEPS[step-1].icon} {STEPS[step-1].label}
+          <span style={{ color: 'var(--ink3)', fontWeight: 400 }}> — خطوة {step} من {STEPS.length}</span>
+        </div>
+      </div>
+
+      {/* Step content */}
+      <div style={{ padding: '18px 20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+      {/* STEP 1 — Basic info */}
+      {step === 1 && (<>
       {/* Image */}
+      <div>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
       <div>
         <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
           {['photo','emoji'].map(t => (
@@ -92,34 +168,6 @@ function ProductForm({ product, onClose }: { product?: Product; onClose: () => v
             </button>
           ))}
         </div>
-        {imgTab === 'photo' ? (
-          <>
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" style={{ display: 'none' }} onChange={handleImg} />
-            {form.imageUrl ? (
-              <div style={{ position: 'relative' }}>
-                <img src={form.imageUrl} alt="" style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 14, border: '1px solid var(--clr-border)' }} />
-                <button onClick={() => setForm(p => ({ ...p, imageUrl: '' }))} style={{ position: 'absolute', top: 8, right: 8, width: 30, height: 30, borderRadius: 8, background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                  <X size={14} />
-                </button>
-              </div>
-            ) : (
-              <div className="img-upload" onClick={() => fileRef.current?.click()}>
-                <Camera size={28} />
-                <span style={{ fontSize: 13.5, fontWeight: 600 }}>التقط صورة أو اختر من المعرض</span>
-                <span style={{ fontSize: 11.5, opacity: .6 }}>أقصى 8MB</span>
-              </div>
-            )}
-          </>
-        ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {EMOJIS.map(e => (
-              <button key={e} onClick={() => setForm(p => ({ ...p, emoji: e }))} style={{ width: 38, height: 38, borderRadius: 10, fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all .15s', border: `2px solid ${form.emoji === e ? 'rgba(99,102,241,0.55)' : 'transparent'}`, background: form.emoji === e ? 'rgba(99,102,241,0.14)' : 'rgba(255,255,255,0.05)', transform: form.emoji === e ? 'scale(1.18)' : 'none' }}>
-                {e}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
 
       {/* Name */}
       <div>
@@ -155,6 +203,238 @@ function ProductForm({ product, onClose }: { product?: Product; onClose: () => v
           {settings.products.categories.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
+      </>)}
+
+      {/* STEP 2 — Images */}
+      {step === 2 && (<>
+      {/* Image */}
+      <div>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+          {(['photo','emoji'] as const).map(t => (
+            <button key={t} onClick={() => setImgTab(t)} className={`tab-btn ${imgTab === t ? 'active' : ''}`} style={{ fontSize: 12.5 }}>
+              {t === 'photo' ? '📸 صورة' : '😊 إيقونة'}
+            </button>
+          ))}
+        </div>
+        {imgTab === 'photo' ? (
+          <>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" style={{ display: 'none' }} onChange={handleImg} />
+            {form.imageUrl ? (
+              <div style={{ position: 'relative' }}>
+                <img src={form.imageUrl} alt="" style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 14, border: '1px solid var(--border)' }} />
+                <button onClick={() => setForm(p => ({ ...p, imageUrl: '' }))} style={{ position: 'absolute', top: 8, right: 8, width: 30, height: 30, borderRadius: 8, background: 'rgba(0,0,0,.7)', border: 'none', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <X size={14} />
+                </button>
+                {/* AI suggestions */}
+                <div style={{ marginTop: 8, padding: '10px 12px', background: 'var(--ember-soft)', border: '1px solid var(--border-ember)', borderRadius: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--ember)', marginBottom: 8 }}>✨ اقتراحات AI</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {[{e:'🎨',l:'محرر الصور',a:'editor'},{e:'🏷️',l:'إضافة اللوغو',a:'logo'},{e:'📝',l:'اسم المتجر',a:'name'},{e:'👗',l:'شخص يلبسه',a:'wear'}].map(opt => (
+                      <button key={opt.a} onClick={() => {
+                        if (opt.a === 'wear') { notify('info', '🤖 يحتاج مفتاح Gemini Vision'); return; }
+                        sessionStorage.setItem('sahar_editor_image', form.imageUrl);
+                        if (opt.a !== 'editor') sessionStorage.setItem('editor_action', opt.a);
+                        if (opt.a === 'name') sessionStorage.setItem('editor_store_name', settings.brand.name || 'SAHAR shop');
+                        onClose(); setTimeout(() => setPage('editor'), 80);
+                      }} style={{ display:'flex',alignItems:'center',gap:5,padding:'5px 11px',borderRadius:8,background:'var(--panel)',border:'1px solid var(--border)',color:'var(--ink2)',fontSize:11,fontWeight:700,cursor:'pointer' }}>
+                        {opt.e} {opt.l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="img-upload" onClick={() => fileRef.current?.click()}>
+                <Camera size={28} />
+                <span style={{ fontSize: 13.5, fontWeight: 600 }}>التقط أو اختر من المعرض</span>
+                <span style={{ fontSize: 11.5, opacity: .6 }}>أقصى 8MB</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {EMOJIS.map(e => (
+              <button key={e} onClick={() => setForm(p => ({ ...p, emoji: e }))}
+                style={{ width: 38, height: 38, borderRadius: 10, fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: `2px solid ${form.emoji === e ? 'var(--ember)' : 'transparent'}`, background: form.emoji === e ? 'var(--ember-soft)' : 'rgba(255,255,255,.05)' }}>
+                {e}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Color images */}
+      {form.colors.length > 0 && (
+        <div>
+          <label className="label">صور الألوان (اختياري)</label>
+          <p style={{ fontSize: 11, color: 'var(--ink3)', marginBottom: 8 }}>صورة مستقلة لكل لون — يراها الزبون عند اختياره</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {form.colors.map(color => {
+              const colorImg = ((form as any).colorImages || {})[color];
+              const inputId = `ci-${color}`;
+              return (
+                <div key={color} style={{ display:'flex',alignItems:'center',gap:10,padding:'8px 12px',background:'var(--void2)',borderRadius:10,border:'1px solid var(--border)' }}>
+                  <div style={{ width:52,height:52,borderRadius:8,overflow:'hidden',background:'var(--panel)',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,color:'var(--ink3)' }}>
+                    {colorImg ? <img src={colorImg} alt={color} style={{ width:'100%',height:'100%',objectFit:'cover' }}/> : '—'}
+                  </div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:13,fontWeight:700,color:'var(--ink1)',marginBottom:4 }}>{color}</div>
+                    <div style={{ display:'flex',gap:6 }}>
+                      <label htmlFor={inputId} style={{ padding:'4px 10px',borderRadius:6,background:'var(--ember)',color:'#fff',fontSize:11,fontWeight:700,cursor:'pointer' }}>
+                        {colorImg ? '🔄' : '📸 إضافة'}
+                      </label>
+                      {colorImg && <button onClick={() => { const i={...(form as any).colorImages}; delete i[color]; setForm(p=>({...p,colorImages:i})); }} style={{ padding:'4px 10px',borderRadius:6,background:'rgba(255,77,26,.1)',border:'1px solid rgba(255,77,26,.2)',color:'var(--ember)',fontSize:11,cursor:'pointer' }}>حذف</button>}
+                    </div>
+                    <input id={inputId} type="file" accept="image/*" style={{ display:'none' }} onChange={(e) => {
+                      const f=e.target.files?.[0]; if(!f) return;
+                      const r=new FileReader(); r.onload=ev=>setForm(p=>({...p,colorImages:{...(p as any).colorImages,[color]:ev.target?.result as string}})); r.readAsDataURL(f); e.target.value='';
+                    }}/>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      </>)}
+
+      {/* STEP 3 — Pricing */}
+      {step === 3 && (<>
+      <div>
+        <label className="label">السعر * ({settings.brand.currency})</label>
+        <input className="input" type="number" placeholder="299" value={form.price} onChange={e=>setForm(p=>({...p,price:e.target.value}))} dir="ltr" style={{ fontSize: 22, fontWeight: 700 }}/>
+      </div>
+      <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10 }}>
+        <div>
+          <label className="label">السعر القديم (قبل الخصم)</label>
+          <input className="input" type="number" placeholder="399" value={(form as any).oldPrice} onChange={e=>setForm(p=>({...p,oldPrice:e.target.value}))} dir="ltr"/>
+          {(form as any).oldPrice && parseFloat((form as any).oldPrice) > parseFloat(form.price||'0') && (
+            <p style={{ fontSize:11,color:'var(--mint)',fontWeight:700,marginTop:4 }}>
+              🏷️ خصم {Math.round((1-parseFloat(form.price||'0')/parseFloat((form as any).oldPrice))*100)}%
+            </p>
+          )}
+        </div>
+        <div>
+          <label className="label">التكلفة</label>
+          <input className="input" type="number" placeholder="150" value={form.cost} onChange={e=>setForm(p=>({...p,cost:e.target.value}))} dir="ltr"/>
+          {form.price && form.cost && parseFloat(form.price) > 0 && (
+            <p style={{ fontSize:11,color:'#34d399',fontWeight:700,marginTop:4 }}>
+              💰 ربح {Math.round(((parseFloat(form.price)-parseFloat(form.cost))/parseFloat(form.price))*100)}%
+            </p>
+          )}
+        </div>
+      </div>
+      <div>
+        <label className="label">المخزون</label>
+        <input className="input" type="number" placeholder="50" value={form.stock} onChange={e=>setForm(p=>({...p,stock:e.target.value}))} dir="ltr"/>
+      </div>
+      </>)}
+
+      {/* STEP 4 — Smart category fields */}
+      {step === 4 && (<>
+      {/* ── SMART DYNAMIC FIELDS ── */}
+      {/* Old Price (discount) — already in step 3, skip here */}
+      <div>
+        <label className="label">السعر القديم (قبل التخفيض)</label>
+        <input className="input" type="number" placeholder="مثال: 399 — اتركه فارغاً إن لم يكن هناك تخفيض"
+          value={(form as any).oldPrice}
+          onChange={e=>setForm(p=>({...p,oldPrice:e.target.value}))} dir="ltr"/>
+        {(form as any).oldPrice && parseFloat((form as any).oldPrice) > parseFloat(form.price||'0') && (
+          <p style={{ fontSize:11,color:'#34d399',fontWeight:700,marginTop:4 }}>
+            🏷️ تخفيض: {Math.round((1-parseFloat(form.price||'0')/parseFloat((form as any).oldPrice))*100)}%
+          </p>
+        )}
+      </div>
+
+      {/* Gender — clothing, accessory, children */}
+      {['clothing','accessory','children','sport'].includes(catType) && (
+        <div>
+          <label className="label">الجنس / الفئة</label>
+          <div style={{ display:'flex',gap:6,flexWrap:'wrap' }}>
+            {(catType==='children'
+              ? ['ولد','بنت','للجنسين']
+              : ['رجال','نساء','للجنسين','يونيسكس']
+            ).map(g=>(
+              <button key={g} onClick={()=>setForm(p=>({...p,gender:g}))}
+                style={{ padding:'6px 14px',borderRadius:99,fontSize:12,fontWeight:700,cursor:'pointer',border:`1.5px solid ${form.gender===g?'var(--ember)':'var(--border)'}`,background:form.gender===g?'var(--ember-soft)':'transparent',color:form.gender===g?'var(--ember)':'var(--ink3)' }}>
+                {g}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Brand */}
+      {['clothing','shoes','accessory','sport'].includes(catType) && (
+        <div>
+          <label className="label">العلامة التجارية</label>
+          <input className="input" placeholder="Nike / Zara / محلي..." value={form.brand}
+            onChange={e=>setForm(p=>({...p,brand:e.target.value}))}/>
+        </div>
+      )}
+
+      {/* Material */}
+      {['clothing','accessory','home','children'].includes(catType) && (
+        <div>
+          <label className="label">الخامة / المادة</label>
+          <div style={{ display:'flex',gap:6,flexWrap:'wrap',marginBottom:6 }}>
+            {(catType==='clothing'||catType==='children'
+              ? ['قطن 100%','كتان','بوليستر','جلد','دنيم','صوف','مزيج']
+              : catType==='accessory'
+              ? ['جلد طبيعي','جلد صناعي','ستانلس','ذهب','فضة','قماش']
+              : ['خشب','معدن','بلاستيك','زجاج','قماش']
+            ).map(m=>(
+              <button key={m} onClick={()=>setForm(p=>({...p,material:m}))}
+                style={{ padding:'5px 12px',borderRadius:99,fontSize:11,fontWeight:700,cursor:'pointer',border:`1.5px solid ${form.material===m?'var(--mint)':'var(--border)'}`,background:form.material===m?'var(--mint-soft)':'transparent',color:form.material===m?'var(--mint)':'var(--ink3)' }}>
+                {m}
+              </button>
+            ))}
+          </div>
+          {!['قطن 100%','كتان','بوليستر','جلد','دنيم','صوف','مزيج','جلد طبيعي','جلد صناعي','ستانلس','ذهب','فضة','قماش','خشب','معدن','بلاستيك','زجاج'].includes(form.material) && (
+            <input className="input" placeholder="أو اكتب خامة أخرى..." value={form.material}
+              onChange={e=>setForm(p=>({...p,material:e.target.value}))} style={{ marginTop:6 }}/>
+          )}
+        </div>
+      )}
+
+      {/* Season — clothing */}
+      {catType==='clothing' && (
+        <div>
+          <label className="label">الموسم</label>
+          <div style={{ display:'flex',gap:6 }}>
+            {['صيف','شتاء','كل الفصول','ربيع/خريف'].map(s=>(
+              <button key={s} onClick={()=>setForm(p=>({...p,season:s}))}
+                style={{ flex:1,padding:'7px 6px',borderRadius:9,fontSize:11,fontWeight:700,cursor:'pointer',border:`1.5px solid ${form.season===s?'var(--gold)':'var(--border)'}`,background:form.season===s?'var(--gold-soft)':'transparent',color:form.season===s?'var(--gold)':'var(--ink3)',textAlign:'center' }}>
+                {s==='صيف'?'☀️':s==='شتاء'?'❄️':s==='كل الفصول'?'🌍':'🍃'} {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Dimensions — home/decor */}
+      {catType==='home' && (
+        <div>
+          <label className="label">الأبعاد / الحجم</label>
+          <input className="input" placeholder="مثال: 120 × 80 × 40 سم" value={form.dimensions}
+            onChange={e=>setForm(p=>({...p,dimensions:e.target.value}))}/>
+        </div>
+      )}
+
+      {/* Children age range */}
+      {catType==='children' && (
+        <div>
+          <label className="label">الفئة العمرية</label>
+          <div style={{ display:'flex',gap:6,flexWrap:'wrap' }}>
+            {['0-6 أشهر','6-12 شهر','1-2 سنة','2-4 سنوات','4-6 سنوات','6-10 سنوات','10+ سنوات'].map(a=>(
+              <button key={a} onClick={()=>setForm(p=>({...p,ageRange:a}))}
+                style={{ padding:'5px 11px',borderRadius:99,fontSize:11,fontWeight:700,cursor:'pointer',border:`1.5px solid ${form.ageRange===a?'var(--aurora)':'var(--border)'}`,background:form.ageRange===a?'var(--aurora-soft)':'transparent',color:form.ageRange===a?'var(--aurora)':'var(--ink3)' }}>
+                {a}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Sizes */}
       <div>
@@ -240,6 +520,10 @@ function ProductForm({ product, onClose }: { product?: Product; onClose: () => v
         </div>
       )}
 
+      </>)}
+
+      {/* STEP 5 — Publish */}
+      {step === 5 && (<>
       {/* Status */}
       <div>
         <label className="label">الحالة</label>
@@ -252,19 +536,35 @@ function ProductForm({ product, onClose }: { product?: Product; onClose: () => v
         </div>
       </div>
 
-      {/* Buttons */}
-      <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
-        <button onClick={onClose} className="btn btn-ghost" style={{ paddingInline: 20 }}>إلغاء</button>
-        <button onClick={save} className="btn btn-primary" style={{ flex: 1, justifyContent: 'center' }}>
-          <Check size={16} /> {product ? 'حفظ التعديلات' : 'إضافة المنتج'}
-        </button>
+      </>)}
+
+      </div>{/* end step content */}
+
+      {/* Navigation */}
+      <div style={{ padding: '12px 20px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'center' }}>
+        {step > 1 && (
+          <button onClick={() => setStep(s => s - 1)} className="btn btn-ghost" style={{ paddingInline: 16 }}>
+            → رجوع
+          </button>
+        )}
+        <div style={{ flex: 1 }}/>
+        {step < 5 ? (
+          <button onClick={() => canNext() ? setStep(s => s + 1) : notify('error', 'أكمل الحقول المطلوبة أولاً')}
+            className="btn btn-primary" style={{ paddingInline: 24 }}>
+            التالي ←
+          </button>
+        ) : (
+          <button onClick={save} className="btn btn-primary" style={{ paddingInline: 24, justifyContent: 'center' }}>
+            <Check size={16} /> {product ? 'حفظ التعديلات' : 'نشر المنتج'}
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
 export default function ProductsPage() {
-  const { products, deleteProduct, adjustStock, settings } = useStore();
+  const { products, setPage, deleteProduct, adjustStock, settings } = useStore();
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<Sort>('newest');
@@ -331,10 +631,27 @@ export default function ProductsPage() {
 
       {/* Grid */}
       {filtered.length === 0 ? (
-        <div className="card" style={{ padding: '40px 24px', textAlign: 'center' }}>
-          <img src="/empty-products.png" alt="No Products" style={{ width: 200, height: 200, margin: '0 auto 16px', display: 'block', opacity: 0.85 }} />
-          <p style={{ color: 'var(--txt-2)', fontWeight: 700, fontSize: 18, marginBottom: 6 }}>{search ? 'لا نتائج للبحث' : 'لا توجد منتجات بعد'}</p>
-          {!search && <button onClick={() => setModal('add')} className="btn btn-primary" style={{ margin: '0 auto', marginTop: 16 }}><Plus size={16} /> أضف أول منتج</button>}
+        <div className="card">
+          {search ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">🔍</div>
+              <div>
+                <p className="empty-state-title">لا نتائج لـ "{search}"</p>
+                <p className="empty-state-sub">جرب كلمة بحث مختلفة أو تحقق من الإملاء</p>
+              </div>
+            </div>
+          ) : (
+            <div className="empty-state">
+              <div className="empty-state-icon">📦</div>
+              <div>
+                <p className="empty-state-title">لا توجد منتجات بعد</p>
+                <p className="empty-state-sub">أضف أول منتج وشارك متجرك مع زبائنك</p>
+              </div>
+              <button onClick={() => setModal('add')} className="btn btn-primary">
+                <Plus size={15}/> أضف أول منتج
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
@@ -342,7 +659,9 @@ export default function ProductsPage() {
             const margin = p.cost > 0 ? Math.round(((p.price - p.cost) / p.price) * 100) : 0;
             const stockColor = p.stock === 0 ? '#f87171' : p.stock <= settings.products.lowStockAlert ? '#fbbf24' : '#34d399';
             return (
-              <div key={p.id} className="card" style={{ overflow: 'hidden', position: 'relative', cursor: 'pointer', transition: 'all .22s' }}
+              <div key={p.id} className="product-card"
+                onMouseEnter={e=>{const el=e.currentTarget as HTMLElement; el.style.transform='translateY(-4px)'; el.style.boxShadow='0 12px 36px rgba(0,0,0,.4)'; el.style.borderColor='rgba(255,255,255,.12)';}}
+                onMouseLeave={e=>{const el=e.currentTarget as HTMLElement; el.style.transform=''; el.style.boxShadow=''; el.style.borderColor='';}}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow = 'var(--sh-md)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = ''; }}>
                 {/* Image / Emoji */}

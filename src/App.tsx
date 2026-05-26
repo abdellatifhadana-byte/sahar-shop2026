@@ -51,12 +51,19 @@ function RouterSync() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Public routes that RouterSync must NEVER interfere with
+  const isPublicRoute = location.pathname.startsWith('/store') ||
+    location.pathname.startsWith('/landing') ||
+    location.pathname === '/';
+
   useEffect(() => {
+    if (isPublicRoute) return; // Never sync from public routes
     const page = URL_PAGES[location.pathname];
     if (page && page !== currentPage) setPage(page as any);
   }, [location.pathname]);
 
   useEffect(() => {
+    if (isPublicRoute) return; // Never push navigation from public routes
     const url = PAGE_URLS[currentPage];
     if (url && location.pathname !== url) navigate(url, { replace: false });
   }, [currentPage]);

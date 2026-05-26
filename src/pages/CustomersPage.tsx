@@ -121,7 +121,7 @@ export default function CustomersPage() {
 
         {filtered.length === 0 && (
           <div className="card" style={{ padding: '40px 24px', textAlign: 'center' }}>
-            <img src="/empty-customers.png" alt="No Customers" style={{ width: 180, height: 140, margin: '0 auto 12px', display: 'block', opacity: 0.8 }} />
+            <div className="empty-state-icon">👥</div>
             <p style={{ color: 'var(--txt-2)', fontWeight: 700, fontSize: 18 }}>لا نتائج للبحث</p>
           </div>
         )}
