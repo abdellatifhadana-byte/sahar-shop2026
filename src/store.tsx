@@ -7,6 +7,7 @@ import {
   type Page, type UserRole, type LogType, type LogSeverity, type NotifType, type OrderStatus,
 } from './types';
 import * as api from './services/api';
+import { validateImport } from './utils/importSchema';
 
 interface StoreValue {
   token: string | null;
@@ -66,7 +67,7 @@ interface StoreValue {
   markNotifRead: (id: string) => void;
   log: (user: string, action: string, details: string, type: LogType, severity: LogSeverity) => void;
   exportData: () => void;
-  importData: (json: string) => boolean;
+  importData: (json: string) => { ok: boolean; errors?: string[]; stats?: { products: number; orders: number; customers: number } };
   resetToDemo: () => void;
   refreshData: () => Promise<void>;
 }
@@ -509,8 +510,42 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   const importData = (json: string) => {
-    try { setState(s => ({ ...s, ...JSON.parse(json) })); return true; }
-    catch { return false; }
+    const result = validateImport(json);
+
+    if (!result.ok || !result.data) {
+      const summary = result.errors?.slice(0, 3).join(' | ') ?? 'خطأ غير معروف';
+      notify('error', `❌ فشل الاستيراد: ${summary}`);
+      return result;
+    }
+
+    const { data, stats } = result;
+
+    // Fusion sécurisée : uniquement les clés validées, jamais token/user/etc.
+    setState(s => ({
+      ...s,
+      ...(data.products  ? { products:  data.products  } : {}),
+      ...(data.orders    ? { orders:    data.orders    } : {}),
+      ...(data.customers ? { customers: data.customers } : {}),
+      ...(data.settings  ? {
+        settings: {
+          ...s.settings,
+          ...(data.settings.brand    ? { brand:    { ...s.settings.brand,    ...data.settings.brand    } } : {}),
+          ...(data.settings.products ? { products: { ...s.settings.products, ...data.settings.products } } : {}),
+          ...(data.settings.goals    ? { goals:    { ...s.settings.goals,    ...data.settings.goals    } } : {}),
+        },
+      } : {}),
+    }));
+
+    const msg = [
+      (stats!.products  > 0) ? `${stats!.products} منتج`  : '',
+      (stats!.orders    > 0) ? `${stats!.orders} طلب`     : '',
+      (stats!.customers > 0) ? `${stats!.customers} زبون` : '',
+    ].filter(Boolean).join(' · ');
+
+    notify('success', `✅ تم الاستيراد — ${msg || 'الإعدادات'}`);
+    log('المدير', 'استيراد بيانات', msg || 'إعدادات فقط', 'settings', 'success');
+
+    return result;
   };
 
   const resetToDemo = () => {
