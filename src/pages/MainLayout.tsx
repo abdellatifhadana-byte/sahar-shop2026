@@ -48,6 +48,7 @@ function PageContent() {
     case 'banner':        return <BannerStudioPage />;
     case 'editor':        return <ImageEditorPage />;
     case 'import':        return <ChatImportPage />;
+    case 'insights':      return <AnalyticsPage />;
     default:              return <DashboardPage />;
   }
 }

@@ -4,7 +4,7 @@
 
 export type Page =
   | 'dashboard' | 'products' | 'orders' | 'conversations'
-  | 'customers' | 'analytics' | 'connections' | 'delivery'
+  | 'customers' | 'analytics' | 'insights' | 'connections' | 'delivery'
   | 'notifications' | 'settings' | 'banner' | 'editor' | 'import';
 
 export type UserRole = 'admin' | 'seller' | 'support' | 'delivery';

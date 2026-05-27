@@ -13,6 +13,7 @@ const PAGE_URLS: Record<string, string> = {
   conversations: '/messages',
   customers:     '/customers',
   analytics:     '/analytics',
+  insights:      '/insights',
   connections:   '/connections',
   delivery:      '/delivery',
   notifications: '/notifications',
@@ -96,7 +97,7 @@ function AppShell() {
 
         {/* ── PROTECTED: Merchant dashboard ── */}
         {['/dashboard','/products','/orders','/messages','/customers',
-          '/analytics','/connections','/delivery','/notifications',
+          '/analytics','/insights','/connections','/delivery','/notifications',
           '/settings','/studio','/editor','/import'].map(path => (
           <Route key={path} path={path}
             element={isAuthed ? <MainLayout /> : <Navigate to="/login" replace />} />

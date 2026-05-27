@@ -78,6 +78,7 @@ function QuickOrderModal({ onClose, products, settings, addOrder, notify }: any)
 }
 
 import { useState } from 'react';
+import React from 'react';
 import { useStore } from '../store';
 import { Search, ChevronDown, ChevronUp, CheckCircle, XCircle, Package, AlertTriangle, Bot, Loader2 } from 'lucide-react';
 
@@ -204,12 +205,13 @@ function printOrder(order: any, currency: string) {
 }
 
 export default function OrdersPage() {
-  const { orders, approveOrder, rejectOrder, shipOrder, deliverOrder, settings, notify } = useStore();
+  const { orders, approveOrder, rejectOrder, shipOrder, deliverOrder, settings, notify, customers } = useStore();
   const [filter, setFilter] = useState('pending');
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [view, setView] = useState<'list' | 'kanban'>('list');
   const [autoShipState, setAutoShipState] = useState<{id: string, step: number, msg: string} | null>(null);
+  const [mainTab, setMainTab] = React.useState<'orders'|'customers'>('orders');
   const { currency } = settings.brand;
 
   const filtered = orders.filter(o => (filter === 'all' || o.status === filter) && (!search || o.customerName.includes(search) || o.id.includes(search) || o.city.includes(search)));
@@ -251,6 +253,46 @@ export default function OrdersPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+      {/* ── MAIN TAB SWITCHER ── */}
+      <div style={{ display: 'flex', gap: 0, background: 'var(--panel2)', borderRadius: 12, padding: 4, border: '1px solid var(--border)' }}>
+        <button
+          onClick={() => setMainTab('orders')}
+          style={{
+            flex: 1, padding: '9px 16px', borderRadius: 9, fontSize: 13, fontWeight: 700,
+            border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+            background: mainTab === 'orders' ? 'var(--panel3)' : 'transparent',
+            color: mainTab === 'orders' ? 'var(--ink1)' : 'var(--ink3)',
+            boxShadow: mainTab === 'orders' ? 'var(--shadow-xs)' : 'none',
+            transition: 'all .15s',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+          }}
+        >
+          🛒 الطلبات
+          {pending > 0 && (
+            <span style={{ background: 'var(--ember)', color: '#fff', fontSize: 10, fontWeight: 900, padding: '1px 6px', borderRadius: 99 }}>
+              {pending}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setMainTab('customers')}
+          style={{
+            flex: 1, padding: '9px 16px', borderRadius: 9, fontSize: 13, fontWeight: 700,
+            border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+            background: mainTab === 'customers' ? 'var(--panel3)' : 'transparent',
+            color: mainTab === 'customers' ? 'var(--ink1)' : 'var(--ink3)',
+            boxShadow: mainTab === 'customers' ? 'var(--shadow-xs)' : 'none',
+            transition: 'all .15s',
+          }}
+        >
+          👥 الزبائن ({customers.length})
+        </button>
+      </div>
+
+      {/* ── ORDERS TAB ── */}
+      {mainTab === 'orders' && (
+      <>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
@@ -431,6 +473,77 @@ export default function OrdersPage() {
           )}
         </div>
       </>)}
+      </>
+      )}
+
+      {/* ── CUSTOMERS TAB ── */}
+      {mainTab === 'customers' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Stats row */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+            {[
+              { label: 'إجمالي الزبائن', value: customers.length, icon: '👥' },
+              { label: 'VIP', value: customers.filter((c:any) => c.vip).length, icon: '⭐' },
+              { label: 'متكررون', value: customers.filter((c:any) => c.totalOrders >= 3).length, icon: '🔁' },
+            ].map((s, i) => (
+              <div key={i} className="card" style={{ padding: '14px 12px', textAlign: 'center' }}>
+                <div style={{ fontSize: 22, marginBottom: 4 }}>{s.icon}</div>
+                <div style={{ fontSize: 20, fontWeight: 900, color: 'var(--ink1)' }}>{s.value}</div>
+                <div style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 2 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+          {/* Customer List */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {customers.length === 0 ? (
+              <div className="card">
+                <div className="empty-state">
+                  <div className="empty-state-icon">👥</div>
+                  <p className="empty-state-title">لا يوجد زبائن بعد</p>
+                  <p className="empty-state-sub">سيظهر الزبائن تلقائياً عند ورود الطلبات</p>
+                </div>
+              </div>
+            ) : customers.map((c: any) => (
+              <div key={c.id} className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{
+                  width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+                  background: c.vip ? 'linear-gradient(135deg,var(--gold),var(--gold2))' : 'var(--panel3)',
+                  border: `1px solid ${c.vip ? 'var(--border-gold)' : 'var(--border)'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 16, fontWeight: 900,
+                  color: c.vip ? '#1a1200' : 'var(--ink2)',
+                }}>
+                  {c.name?.slice(0, 1) || '؟'}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 2 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink1)' }}>{c.name}</span>
+                    {c.vip && <span className="badge badge-gold" style={{ fontSize: 9 }}>VIP ⭐</span>}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--ink3)' }}>
+                    {c.city} · {c.source} · {c.totalOrders} طلب
+                  </div>
+                </div>
+                <div style={{ textAlign: 'left', flexShrink: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--ink1)' }}>
+                    {c.totalSpent?.toLocaleString() || 0} {currency}
+                  </div>
+                  {c.phone && (
+                    <a
+                      href={`https://wa.me/${c.phone.replace(/\D/g,'')}`}
+                      target="_blank" rel="noreferrer"
+                      style={{ fontSize: 11, color: 'var(--mint)', textDecoration: 'none', fontWeight: 600 }}
+                    >
+                      💬 واتساب
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -1,11 +1,11 @@
 import { useState, useRef } from 'react';
 import { useStore } from '../store';
-import { Settings, Bot, Package, Truck, FileText, Shield, Users, RefreshCw, Download, Upload, Plus, Trash2, Cloud, Bell, Palette } from 'lucide-react';
+import { Settings, Bot, Package, Truck, FileText, Shield, Users, RefreshCw, Download, Upload, Plus, Trash2, Cloud, Bell, Palette, Wifi } from 'lucide-react';
 import type { TeamMember } from '../types';
 import SystemCheck from '../components/SystemCheck';
 import QRCode from '../components/QRCode';
 
-type Tab = 'general'|'ai'|'chatbot'|'products'|'delivery'|'templates'|'team'|'security'|'notifs'|'design'|'cloud'|'logs';
+type Tab = 'general'|'ai'|'chatbot'|'products'|'delivery'|'templates'|'team'|'security'|'notifs'|'design'|'cloud'|'logs'|'connections';
 
 const TABS: { id: Tab; icon: typeof Settings; label: string }[] = [
   { id: 'general', icon: Settings, label: 'المتجر' },
@@ -13,6 +13,7 @@ const TABS: { id: Tab; icon: typeof Settings; label: string }[] = [
   { id: 'chatbot', icon: Bot, label: 'المساعد' },
   { id: 'products', icon: Package, label: 'المنتجات' },
   { id: 'delivery', icon: Truck, label: 'التوصيل' },
+  { id: 'connections', icon: Wifi, label: 'الاتصالات' },
   { id: 'templates', icon: FileText, label: 'القوالب' },
   { id: 'team', icon: Users, label: 'الفريق' },
   { id: 'security', icon: Shield, label: 'الأمان' },
@@ -42,6 +43,41 @@ const Toggle = ({ on, onClick, label, sub }: { on: boolean; onClick: () => void;
     <button onClick={onClick} className={`toggle ${on ? 'on' : ''}`} />
   </div>
 );
+
+function ChangePasswordForm({ notify }: { notify: (type: string, msg: string) => void }) {
+  const [form, setForm] = useState({ current: '', next: '', confirm: '' });
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
+    if (!form.current || !form.next) { notify('error', 'أدخل كلمة المرور الحالية والجديدة'); return; }
+    if (form.next !== form.confirm) { notify('error', 'كلمتا المرور غير متطابقتين'); return; }
+    if (form.next.length < 6) { notify('error', 'يجب أن تكون 6 أحرف على الأقل'); return; }
+    setLoading(true);
+    try {
+      const tok = localStorage.getItem('ai_commerce_token') || '';
+      const r = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tok}` },
+        body: JSON.stringify({ currentPassword: form.current, newPassword: form.next }),
+      });
+      const d = await r.json();
+      if (d.success) { notify('success', '✅ تم تغيير كلمة المرور'); setForm({ current: '', next: '', confirm: '' }); }
+      else notify('error', d.error || 'فشل التغيير');
+    } catch { notify('error', 'خطأ في الاتصال'); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <input className="input" type="password" placeholder="كلمة المرور الحالية" value={form.current} onChange={e => setForm(f => ({ ...f, current: e.target.value }))} />
+      <input className="input" type="password" placeholder="كلمة المرور الجديدة" value={form.next} onChange={e => setForm(f => ({ ...f, next: e.target.value }))} />
+      <input className="input" type="password" placeholder="تأكيد كلمة المرور الجديدة" value={form.confirm} onChange={e => setForm(f => ({ ...f, confirm: e.target.value }))} />
+      <button onClick={submit} disabled={loading} className="btn btn-primary" style={{ width: 'fit-content' }}>
+        {loading ? '⏳ جارٍ...' : '🔒 تغيير كلمة المرور'}
+      </button>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const { settings, updateSettings, notify, logout, isOnline, refreshData, addTemplate, updateTemplate, deleteTemplate, auditLogs, exportData, importData, resetToDemo } = useStore();
@@ -437,6 +473,99 @@ export default function SettingsPage() {
             </div>
           </div>
           <SystemCheck />
+        </div>
+      )}
+
+      {/* ── Connections ── */}
+      {tab === 'connections' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Section title="🤖 مفاتيح الذكاء الاصطناعي">
+            <Field label="OpenAI API Key (GPT-4o)">
+              <input
+                className="input" type="password" dir="ltr"
+                placeholder="sk-proj-..."
+                value={s.ai.apiKey || ''}
+                onChange={e => updateSettings('ai', { ...s.ai, apiKey: e.target.value })}
+              />
+              <p style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 4 }}>من platform.openai.com/api-keys</p>
+            </Field>
+            <Field label="Google Gemini API Key (مجاني)">
+              <input
+                className="input" type="password" dir="ltr"
+                placeholder="AIzaSy..."
+                value={s.ai.geminiKey || ''}
+                onChange={e => updateSettings('ai', { ...s.ai, geminiKey: e.target.value })}
+              />
+              <p style={{ fontSize: 11, color: 'var(--ink3)', marginTop: 4 }}>من aistudio.google.com/app/apikey</p>
+            </Field>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => updateSettings('ai', { ...s.ai, provider: 'openai' })}
+                className={`chip ${s.ai.provider === 'openai' ? 'active' : ''}`}>
+                🧠 OpenAI
+              </button>
+              <button onClick={() => updateSettings('ai', { ...s.ai, provider: 'gemini' })}
+                className={`chip ${s.ai.provider === 'gemini' ? 'active' : ''}`}>
+                🤖 Gemini
+              </button>
+            </div>
+            <button onClick={() => notify('success', '✅ تم الحفظ')} className="btn btn-primary" style={{ width: 'fit-content' }}>حفظ</button>
+          </Section>
+
+          <Section title="📱 واتساب بيزنس">
+            <Field label="Phone Number ID">
+              <input
+                className="input" dir="ltr"
+                placeholder="123456789012345"
+                value={s.social?.whatsapp?.pageId || ''}
+                onChange={e => updateSettings('social', { ...s.social, whatsapp: { ...s.social.whatsapp, pageId: e.target.value } })}
+              />
+            </Field>
+            <Field label="Access Token">
+              <input
+                className="input" type="password" dir="ltr"
+                placeholder="EAAxxxxxxx..."
+                value={s.social?.whatsapp?.accessToken || ''}
+                onChange={e => updateSettings('social', { ...s.social, whatsapp: { ...s.social.whatsapp, accessToken: e.target.value } })}
+              />
+            </Field>
+            <button onClick={() => notify('success', '✅ تم الحفظ')} className="btn btn-primary" style={{ width: 'fit-content' }}>حفظ</button>
+          </Section>
+
+          <Section title="📘 فيسبوك وإنستغرام">
+            <Field label="Facebook Page ID">
+              <input
+                className="input" dir="ltr"
+                placeholder="123456789"
+                value={s.social?.facebook?.pageId || ''}
+                onChange={e => updateSettings('social', { ...s.social, facebook: { ...s.social.facebook, pageId: e.target.value } })}
+              />
+            </Field>
+            <Field label="Page Access Token (يصلح لـ Facebook وInstagram)">
+              <input
+                className="input" type="password" dir="ltr"
+                placeholder="EAAxxxxxxx..."
+                value={s.social?.facebook?.accessToken || ''}
+                onChange={e => updateSettings('social', { ...s.social, facebook: { ...s.social.facebook, accessToken: e.target.value }, instagram: { ...s.social.instagram, accessToken: e.target.value } })}
+              />
+            </Field>
+            <Field label="Instagram Account ID">
+              <input
+                className="input" dir="ltr"
+                placeholder="17841400000000000"
+                value={s.social?.instagram?.pageId || ''}
+                onChange={e => updateSettings('social', { ...s.social, instagram: { ...s.social.instagram, pageId: e.target.value } })}
+              />
+            </Field>
+            <button onClick={() => notify('success', '✅ تم الحفظ')} className="btn btn-primary" style={{ width: 'fit-content' }}>حفظ</button>
+          </Section>
+
+          <div className="card" style={{ padding: '16px 18px', background: 'rgba(0,210,179,.04)', border: '1px solid rgba(0,210,179,.15)' }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--mint)', marginBottom: 6 }}>💡 نصيحة</p>
+            <p style={{ fontSize: 12, color: 'var(--ink3)', lineHeight: 1.6 }}>
+              لربط واتساب: اذهب لـ developers.facebook.com وأنشئ App من نوع Business.<br/>
+              للحصول على Gemini مجاناً: اذهب لـ aistudio.google.com وأنشئ API Key.
+            </p>
+          </div>
         </div>
       )}
     </div>

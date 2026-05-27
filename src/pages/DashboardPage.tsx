@@ -170,6 +170,26 @@ export default function DashboardPage() {
   return (
     <div style={{display:'flex',flexDirection:'column',gap:16}}>
 
+      {/* Quick Actions */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <button
+          onClick={() => setPage('products')}
+          className="btn btn-primary"
+          style={{ padding: '13px 16px', fontSize: 14, borderRadius: 12, justifyContent: 'center', gap: 8 }}
+        >
+          <span style={{ fontSize: 18 }}>📦</span>
+          <span>إضافة منتج</span>
+        </button>
+        <button
+          onClick={() => setPage('orders')}
+          className="btn btn-ghost"
+          style={{ padding: '13px 16px', fontSize: 14, borderRadius: 12, justifyContent: 'center', gap: 8, border: '1px solid var(--border2)' }}
+        >
+          <span style={{ fontSize: 18 }}>🛒</span>
+          <span>الطلبات</span>
+        </button>
+      </div>
+
       {/* Store Link Widget */}
       {fullStoreUrl && (
         <div style={{background:'rgba(0,200,150,.06)',border:'1px solid rgba(0,200,150,.2)',borderRadius:'var(--r)',padding:'14px 16px',display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
