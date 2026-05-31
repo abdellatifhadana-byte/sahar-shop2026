@@ -5,7 +5,7 @@
 export type Page =
   | 'dashboard' | 'products' | 'orders' | 'conversations'
   | 'customers' | 'analytics' | 'insights' | 'connections' | 'delivery'
-  | 'notifications' | 'settings' | 'banner' | 'editor' | 'import';
+  | 'notifications' | 'settings' | 'banner' | 'editor' | 'import' | 'coupons';
 
 export type UserRole = 'admin' | 'seller' | 'support' | 'delivery';
 export type OrderStatus = 'pending' | 'pending_confirmation' | 'approved' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
@@ -15,6 +15,8 @@ export type LogType = 'product' | 'order' | 'customer' | 'ai' | 'delivery' | 'se
 export type LogSeverity = 'info' | 'success' | 'warning' | 'error';
 
 // ── Entities ──────────────────────────────────────────────────
+
+export type ProductType = 'product' | 'service' | 'digital';
 
 export interface Product {
   id: string;
@@ -35,6 +37,20 @@ export interface Product {
   views: number;
   sales: number;
   createdAt: string;
+  type: ProductType;
+  duration?: string; // for services: "ساعتين" / "نصف يوم"
+  workArea?: string; // for services: "الدار البيضاء، الرباط"
+  portfolio?: string[]; // service portfolio images
+  customFields?: CustomFieldDef[];
+}
+
+export type CustomFieldType = 'text' | 'select' | 'number' | 'boolean' | 'color';
+export interface CustomFieldDef {
+  id: string;
+  label: string;
+  type: CustomFieldType;
+  options: string[];
+  value: string;
 }
 
 export interface Customer {
@@ -51,6 +67,8 @@ export interface Customer {
   vip: boolean;
   trustScore: number; // 0-100 (Delivery Trust)
   buyerScore: number; // 0-100 (Likelihood to buy)
+  loyaltyPoints?: number;
+  createdAt?: string;
 }
 
 export interface OrderItem {
@@ -284,6 +302,9 @@ export interface AppSettings {
   cloudEnabled: boolean;
   supabaseUrl: string;
   supabaseKey: string;
+  cloudinaryCloudName: string;
+  cloudinaryApiKey: string;
+  cloudinaryApiSecret: string;
   onboardingDone: boolean;
 }
 
@@ -345,6 +366,7 @@ export const defaultSettings: AppSettings = {
   team: [{ id: 'u1', name: 'المدير', email: 'admin@mystore.ma', role: 'admin', active: true }],
   goals: { daily: 1000, monthly: 30000 },
   cloudEnabled: false, supabaseUrl: '', supabaseKey: '',
+  cloudinaryCloudName: '', cloudinaryApiKey: '', cloudinaryApiSecret: '',
   onboardingDone: false,
 };
 

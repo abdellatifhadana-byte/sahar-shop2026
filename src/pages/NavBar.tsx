@@ -1,19 +1,21 @@
 import { useStore } from '../store';
 import type { Page } from '../types';
 import {
-  LayoutDashboard, Package, ShoppingBag,
-  BarChart3, Settings, MessageSquare,
-  Search, LogOut, ExternalLink, Sun, Moon
+  LayoutDashboard, BarChart3, Settings, Tag,
+  Search, LogOut, ExternalLink, Sun, Moon, Plus,
+  Users, MoreHorizontal, X,
 } from 'lucide-react';
+import { NavIconCart, NavIconTruck, NavIconBrain, NavIconPackage, NavIconMessage } from '../components/icons';
 import React from 'react';
 import GlobalSearch from '../components/GlobalSearch';
 
 const MAIN_NAV: { page: Page; icon: any; label: string }[] = [
-  { page: 'dashboard', icon: LayoutDashboard, label: 'الرئيسية'  },
-  { page: 'products',  icon: Package,         label: 'المنتجات'  },
-  { page: 'orders',    icon: ShoppingBag,     label: 'الطلبات'   },
-  { page: 'insights',  icon: BarChart3,       label: 'الأداء'    },
-  { page: 'settings',  icon: Settings,        label: 'الإعدادات' },
+  { page: 'dashboard',   icon: LayoutDashboard, label: 'الرئيسية'   },
+  { page: 'products',    icon: NavIconPackage,  label: 'المنتجات'   },
+  { page: 'orders',      icon: NavIconCart,     label: 'الطلبات'    },
+  { page: 'insights',    icon: BarChart3,       label: 'الأداء'     },
+  { page: 'connections', icon: NavIconBrain,    label: 'الاتصالات'  },
+  { page: 'settings',    icon: Settings,        label: 'الإعدادات'  },
 ];
 
 export default function NavBar() {
@@ -24,6 +26,8 @@ export default function NavBar() {
   } = useStore();
 
   const [showSearch, setShowSearch] = React.useState(false);
+  const [fabOpen, setFabOpen] = React.useState(false);
+  const [moreOpen, setMoreOpen] = React.useState(false);
 
   React.useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -44,6 +48,12 @@ export default function NavBar() {
 
   const go = (p: Page) => { setPage(p); setSidebarOpen(false); };
 
+  const doFabAction = (action: string, page: Page) => {
+    try { localStorage.setItem('pendingFab', action); } catch {}
+    go(page);
+    setFabOpen(false);
+  };
+
   const userId = user?.id || (() => {
     try { const u = localStorage.getItem('ai_commerce_user'); return u ? JSON.parse(u)?.id : null; } catch { return null; }
   })();
@@ -59,9 +69,9 @@ export default function NavBar() {
       <header className="topnav topnav-desktop">
         {/* Logo */}
         <div className="nav-logo">
-          <div style={{ width: 32, height: 32, borderRadius: 9, overflow: 'hidden', background: 'var(--void)', border: '1px solid rgba(255,255,255,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 12px rgba(255,77,26,.2)' }}>
+          <div style={{ width: 32, height: 32, borderRadius: 9, overflow: 'hidden', background: 'var(--void)', border: '1px solid rgba(255,255,255,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 12px rgba(255,106,0,.2)' }}>
             <img src="/sahar-logo-text.png" alt="S" style={{ width: '88%', height: '88%', objectFit: 'contain' }}
-              onError={e => { const el = e.currentTarget as HTMLImageElement; el.style.display = 'none'; (el.parentElement as HTMLElement).innerHTML = '<span style="font-size:14px;font-weight:900;color:#FF4D1A;font-family:monospace">S</span>'; }} />
+              onError={e => { const el = e.currentTarget as HTMLImageElement; el.style.display = 'none'; (el.parentElement as HTMLElement).innerHTML = '<span style="font-size:14px;font-weight:900;color:#FF6A00;font-family:monospace">S</span>'; }} />
           </div>
           <span className="nav-brand">{settings.brand.name || 'SAHAR shop'}</span>
         </div>
@@ -86,12 +96,12 @@ export default function NavBar() {
           {/* Messages badge button */}
           <button
             onClick={() => go('conversations')}
-            style={{ position: 'relative', width: 32, height: 32, borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: currentPage === 'conversations' ? 'var(--ember-soft)' : 'rgba(255,255,255,.05)', border: `1px solid ${currentPage === 'conversations' ? 'rgba(255,77,26,.3)' : 'var(--border)'}`, color: currentPage === 'conversations' ? 'var(--ember)' : 'var(--ink3)', cursor: 'pointer', transition: 'all .15s' }}
+            style={{ position: 'relative', width: 32, height: 32, borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: currentPage === 'conversations' ? 'var(--ember-soft)' : 'rgba(255,255,255,.05)', border: `1px solid ${currentPage === 'conversations' ? 'rgba(255,106,0,.3)' : 'var(--border)'}`, color: currentPage === 'conversations' ? 'var(--ember)' : 'var(--ink3)', cursor: 'pointer', transition: 'all .15s' }}
             title="الرسائل"
           >
-            <MessageSquare size={14} strokeWidth={2} />
+            <NavIconMessage size={14} />
             {unreadMsg > 0 && (
-              <span style={{ position: 'absolute', top: -3, right: -3, width: 14, height: 14, background: 'var(--ember)', borderRadius: '50%', fontSize: 8, fontWeight: 900, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 6px rgba(255,77,26,.5)' }}>
+              <span style={{ position: 'absolute', top: -3, right: -3, width: 14, height: 14, background: 'var(--ember)', borderRadius: '50%', fontSize: 8, fontWeight: 900, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 6px rgba(255,106,0,.5)' }}>
                 {unreadMsg > 9 ? '9' : unreadMsg}
               </span>
             )}
@@ -124,7 +134,7 @@ export default function NavBar() {
           </button>
 
           <button onClick={() => { if (window.confirm('هل تريد الخروج؟')) logout(); }}
-            style={{ width: 32, height: 32, borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ember-soft)', border: '1px solid rgba(255,77,26,.2)', color: 'var(--ember)', cursor: 'pointer' }}
+            style={{ width: 32, height: 32, borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ember-soft)', border: '1px solid rgba(255,106,0,.2)', color: 'var(--ember)', cursor: 'pointer' }}
             title="خروج">
             <LogOut size={13} strokeWidth={2.5} />
           </button>
@@ -136,7 +146,7 @@ export default function NavBar() {
         <div className="nav-logo">
           <div style={{ width: 28, height: 28, borderRadius: 8, overflow: 'hidden', background: 'var(--void)', border: '1px solid rgba(255,255,255,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <img src="/sahar-logo-text.png" alt="S" style={{ width: '88%', height: '88%', objectFit: 'contain' }}
-              onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; (e.currentTarget.parentElement as HTMLElement).innerHTML = '<span style="font-size:12px;font-weight:900;color:#FF4D1A">S</span>'; }} />
+              onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; (e.currentTarget.parentElement as HTMLElement).innerHTML = '<span style="font-size:12px;font-weight:900;color:#FF6A00">S</span>'; }} />
           </div>
           <span className="nav-brand" style={{ fontSize: 13, maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {settings.brand.name}
@@ -169,7 +179,7 @@ export default function NavBar() {
               <div className="nav-logo">
                 <div style={{ width: 26, height: 26, borderRadius: 7, overflow: 'hidden', background: 'var(--void)', border: '1px solid rgba(255,255,255,.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <img src="/sahar-logo-text.png" alt="S" style={{ width: '88%', height: '88%', objectFit: 'contain' }}
-                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; (e.currentTarget.parentElement as HTMLElement).innerHTML = '<span style="font-size:11px;font-weight:900;color:#FF4D1A">S</span>'; }} />
+                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; (e.currentTarget.parentElement as HTMLElement).innerHTML = '<span style="font-size:11px;font-weight:900;color:#FF6A00">S</span>'; }} />
                 </div>
                 <span className="nav-brand" style={{ fontSize: 13 }}>{settings.brand.name}</span>
               </div>
@@ -185,7 +195,11 @@ export default function NavBar() {
               </a>
             )}
             <nav style={{ flex: 1, overflowY: 'auto', padding: '6px 0' }}>
-              {[...MAIN_NAV, { page: 'conversations' as Page, icon: MessageSquare, label: 'الرسائل' }].map(item => {
+              {[...MAIN_NAV,
+                { page: 'conversations' as Page, icon: NavIconMessage, label: 'الرسائل' },
+                { page: 'delivery' as Page, icon: NavIconTruck, label: 'التوصيل' },
+                { page: 'coupons' as Page, icon: Tag, label: 'الكوبونات' },
+              ].map(item => {
                 const active = currentPage === item.page || (item.page === 'insights' && currentPage === 'analytics');
                 const b = badge(item.page);
                 return (
@@ -206,7 +220,7 @@ export default function NavBar() {
                 {isDark ? '☀️ نهار' : '🌙 ليل'}
               </button>
               <button onClick={() => { if (window.confirm('خروج؟')) logout(); }}
-                style={{ flex: 1, padding: '8px', borderRadius: 8, background: 'var(--ember-soft)', border: '1px solid rgba(255,77,26,.2)', color: 'var(--ember)', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontFamily: 'inherit' }}>
+                style={{ flex: 1, padding: '8px', borderRadius: 8, background: 'var(--ember-soft)', border: '1px solid rgba(255,106,0,.2)', color: 'var(--ember)', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontFamily: 'inherit' }}>
                 <LogOut size={13} /> خروج
               </button>
             </div>
@@ -215,16 +229,78 @@ export default function NavBar() {
       )}
 
       {/* ══ MOBILE BOTTOM NAV ══ */}
-      <nav className="mobile-bottom-nav">
-        {MAIN_NAV.map(item => {
-          const active = currentPage === item.page || (item.page === 'insights' && currentPage === 'analytics');
+
+      {/* FAB action sheet backdrop */}
+      {fabOpen && (
+        <div
+          onClick={() => setFabOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 999,
+            background: 'rgba(0,0,0,0.55)',
+            backdropFilter: 'blur(2px)',
+          }}
+        />
+      )}
+
+      {/* FAB action sheet */}
+      <div style={{
+        position: 'fixed', left: 0, right: 0, bottom: 70, zIndex: 1000,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+        transform: fabOpen ? 'translateY(0)' : 'translateY(20px)',
+        opacity: fabOpen ? 1 : 0,
+        pointerEvents: fabOpen ? 'auto' : 'none',
+        transition: 'transform 0.22s cubic-bezier(.4,0,.2,1), opacity 0.18s ease',
+        padding: '0 24px 8px',
+      }}>
+        {[
+          { emoji: '📦', label: 'إضافة منتج',  action: 'addProduct',  page: 'products'  as Page },
+          { emoji: '🔧', label: 'إضافة خدمة',  action: 'addService',  page: 'products'  as Page },
+          { emoji: '👤', label: 'إضافة زبون',  action: 'addCustomer', page: 'customers' as Page },
+        ].map((item, i) => (
+          <button
+            key={item.action}
+            onClick={() => doFabAction(item.action, item.page)}
+            style={{
+              width: '100%', maxWidth: 260,
+              padding: '12px 20px',
+              borderRadius: 14,
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              color: 'var(--ink)',
+              fontSize: 15,
+              fontWeight: 700,
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+              transform: fabOpen ? 'translateY(0)' : 'translateY(10px)',
+              opacity: fabOpen ? 1 : 0,
+              transition: `transform 0.2s cubic-bezier(.4,0,.2,1) ${i * 0.04}s, opacity 0.16s ease ${i * 0.04}s`,
+            }}
+          >
+            <span style={{ fontSize: 20 }}>{item.emoji}</span>
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </div>
+
+      <nav className="mobile-bottom-nav" style={{ display: 'flex', alignItems: 'center' }}>
+        {/* Left 2: الرئيسية + المنتجات */}
+        {[
+          { page: 'dashboard' as Page, icon: LayoutDashboard, label: 'الرئيسية' },
+          { page: 'products'  as Page, icon: NavIconPackage,  label: 'المنتجات' },
+        ].map(item => {
+          const active = currentPage === item.page;
           const b = badge(item.page);
           return (
-            <button key={item.page} className={`mob-nav-btn${active ? ' active' : ''}`} onClick={() => go(item.page)}>
+            <button key={item.page} className={`mob-nav-btn${active ? ' active' : ''}`} onClick={() => go(item.page)}
+              style={{ flex: 1 }}>
               <div style={{ position: 'relative' }}>
                 <item.icon size={20} strokeWidth={active ? 2.4 : 1.8} />
                 {b > 0 && (
-                  <span style={{ position: 'absolute', top: -4, right: -4, width: 14, height: 14, background: 'var(--ember)', borderRadius: '50%', fontSize: 8, fontWeight: 900, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 8px rgba(255,77,26,.5)' }}>
+                  <span style={{ position: 'absolute', top: -4, right: -4, width: 14, height: 14, background: 'var(--ember)', borderRadius: '50%', fontSize: 8, fontWeight: 900, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 8px rgba(255,106,0,.5)' }}>
                     {b > 9 ? '9' : b}
                   </span>
                 )}
@@ -233,7 +309,122 @@ export default function NavBar() {
             </button>
           );
         })}
+
+        {/* Central FAB */}
+        <div style={{ flex: '0 0 72px', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+          <button
+            onClick={() => setFabOpen(v => !v)}
+            style={{
+              width: 54, height: 54,
+              borderRadius: '50%',
+              background: 'var(--ember)',
+              border: 'none',
+              color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+              position: 'absolute',
+              bottom: 10,
+              boxShadow: '0 4px 18px rgba(255,106,0,.55), 0 2px 8px rgba(0,0,0,.3)',
+              transform: fabOpen ? 'rotate(45deg)' : 'rotate(0deg)',
+              transition: 'transform 0.22s cubic-bezier(.4,0,.2,1), box-shadow 0.15s ease',
+              zIndex: 10,
+            }}
+            aria-label="قائمة الإجراءات"
+          >
+            <Plus size={26} strokeWidth={2.5} />
+          </button>
+        </div>
+
+        {/* Right 2: الطلبات + المزيد */}
+        {[
+          { page: 'orders' as Page, icon: NavIconCart, label: 'الطلبات' },
+        ].map(item => {
+          const active = currentPage === item.page;
+          const b = badge(item.page);
+          return (
+            <button key={item.page} className={`mob-nav-btn${active ? ' active' : ''}`} onClick={() => go(item.page)}
+              style={{ flex: 1 }}>
+              <div style={{ position: 'relative' }}>
+                <item.icon size={20} strokeWidth={active ? 2.4 : 1.8} />
+                {b > 0 && (
+                  <span style={{ position: 'absolute', top: -4, right: -4, width: 14, height: 14, background: 'var(--ember)', borderRadius: '50%', fontSize: 8, fontWeight: 900, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 8px rgba(255,106,0,.5)' }}>
+                    {b > 9 ? '9' : b}
+                  </span>
+                )}
+              </div>
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+
+        {/* المزيد — opens bottom sheet */}
+        <button className={`mob-nav-btn${moreOpen ? ' active' : ''}`} onClick={() => setMoreOpen(v => !v)} style={{ flex: 1 }}>
+          <div style={{ position: 'relative' }}>
+            <MoreHorizontal size={20} strokeWidth={moreOpen ? 2.4 : 1.8} />
+            {totalAlerts > 0 && !pending && unreadMsg > 0 && (
+              <span style={{ position: 'absolute', top: -4, right: -4, width: 14, height: 14, background: 'var(--ember)', borderRadius: '50%', fontSize: 8, fontWeight: 900, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{unreadMsg > 9 ? '9' : unreadMsg}</span>
+            )}
+          </div>
+          <span>المزيد</span>
+        </button>
       </nav>
+
+      {/* ══ MOBILE "المزيد" BOTTOM SHEET ══ */}
+      {moreOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 998, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(2px)' }}
+          onClick={() => setMoreOpen(false)} />
+      )}
+      <div style={{
+        position: 'fixed', left: 0, right: 0, bottom: moreOpen ? 64 : -300, zIndex: 999,
+        background: 'var(--panel2)', borderRadius: '20px 20px 0 0',
+        border: '1px solid var(--border)', borderBottom: 'none',
+        padding: '16px 16px 20px',
+        transition: 'bottom 0.28s cubic-bezier(.4,0,.2,1)',
+        boxShadow: '0 -8px 32px rgba(0,0,0,.3)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink2)' }}>قائمة التنقل</span>
+          <button onClick={() => setMoreOpen(false)}
+            style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,.06)', border: '1px solid var(--border)', color: 'var(--ink3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <X size={14} />
+          </button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+          {[
+            { page: 'conversations' as Page, icon: NavIconMessage, label: 'الرسائل',   badge: unreadMsg },
+            { page: 'customers'     as Page, icon: Users,          label: 'الزبائن',   badge: 0 },
+            { page: 'analytics'     as Page, icon: BarChart3,      label: 'التحليلات', badge: 0 },
+            { page: 'delivery'      as Page, icon: NavIconTruck,   label: 'التوصيل',   badge: 0 },
+            { page: 'coupons'       as Page, icon: Tag,            label: 'الكوبونات', badge: 0 },
+            { page: 'connections'   as Page, icon: NavIconBrain,   label: 'الاتصالات', badge: 0 },
+            { page: 'notifications' as Page, icon: null,           label: 'الإشعارات', badge: unreadN },
+            { page: 'settings'      as Page, icon: Settings,       label: 'الإعدادات', badge: 0 },
+          ].map(item => {
+            const isActive = currentPage === item.page;
+            const IconComp = item.icon;
+            return (
+              <button key={item.page}
+                onClick={() => { go(item.page); setMoreOpen(false); }}
+                style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                  padding: '10px 4px', borderRadius: 12,
+                  background: isActive ? 'var(--ember-soft)' : 'rgba(255,255,255,.04)',
+                  border: `1px solid ${isActive ? 'rgba(255,106,0,.3)' : 'var(--border)'}`,
+                  color: isActive ? 'var(--ember)' : 'var(--ink2)',
+                  cursor: 'pointer', position: 'relative', fontFamily: 'inherit',
+                }}>
+                {item.badge > 0 && (
+                  <span style={{ position: 'absolute', top: 6, right: 6, width: 14, height: 14, background: 'var(--ember)', borderRadius: '50%', fontSize: 8, fontWeight: 900, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {item.badge > 9 ? '9+' : item.badge}
+                  </span>
+                )}
+                {IconComp ? <IconComp size={18} strokeWidth={isActive ? 2.3 : 1.8} /> : <span style={{ fontSize: 18 }}>🔔</span>}
+                <span style={{ fontSize: 10, fontWeight: 700 }}>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </>
   );
 }

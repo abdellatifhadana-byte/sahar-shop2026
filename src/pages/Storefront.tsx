@@ -8,11 +8,14 @@ import {
 // ══════════════════════════════════════════════
 // TYPES
 // ══════════════════════════════════════════════
+interface CustomField { id:string; label:string; type:string; options:string[]; value:string; }
 interface SProduct {
   id:string; name:string; description:string; price:number; cost?:number;
   stock:number; category:string; sizes:string[]; colors:string[];
   status:string; emoji:string; imageUrl:string; images:string[]; sku?:string;
-  sales:number; views?:number;
+  sales:number; views?:number; colorImages?:Record<string,string>; createdAt?:string;
+  type?:'product'|'service'|'digital'; duration?:string; workArea?:string; portfolio?:string[];
+  customFields?:CustomField[];
 }
 interface CartItem { product:SProduct; quantity:number; size:string; color:string; }
 interface StoreInfo { brand:{name:string;phone:string;currency:string;logo?:string;description?:string;instagram?:string;facebook?:string;whatsapp?:string;email?:string}; deliveryCosts?:Record<string,number>; }
@@ -117,11 +120,11 @@ function ProductCard({ p, onAdd, onView, currency }: { p:SProduct; onAdd:(p:SPro
       onMouseLeave={()=>setHover(false)}
       style={{
         background:'var(--panel)',
-        border:`1px solid ${hover?'rgba(255,77,26,.3)':'var(--border)'}`,
+        border:`1px solid ${hover?'rgba(255,106,0,.3)':'var(--border)'}`,
         borderRadius:20,overflow:'hidden',cursor:'pointer',
         transition:'all .22s ease',
         transform:hover?'translateY(-5px)':'none',
-        boxShadow:hover?'0 12px 40px rgba(0,0,0,.35), 0 0 0 1px rgba(255,77,26,.1)':'none',
+        boxShadow:hover?'0 12px 40px rgba(0,0,0,.35), 0 0 0 1px rgba(255,106,0,.1)':'none',
       }}>
 
       {/* Image area */}
@@ -137,10 +140,12 @@ function ProductCard({ p, onAdd, onView, currency }: { p:SProduct; onAdd:(p:SPro
 
         {/* Top badges */}
         <div style={{ position:'absolute',top:10,right:10,display:'flex',flexDirection:'column',gap:4,alignItems:'flex-end' }}>
-          {isNew && <span style={{ background:'rgba(0,200,150,.9)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99,letterSpacing:'.05em' }}>✨ جديد</span>}
-          {p.stock <= 5 && p.stock > 0 && <span style={{ background:'rgba(245,158,11,.9)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>⚡ آخر {p.stock}</span>}
-          {p.sales > 10 && <span style={{ background:'rgba(255,77,26,.9)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>🔥 الأكثر طلباً</span>}
-          {p.stock === 0 && <span style={{ background:'rgba(0,0,0,.7)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>نفذ المخزون</span>}
+          {p.type === 'service' && <span style={{ background:'rgba(139,92,246,.9)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>🔧 خدمة</span>}
+          {p.type === 'digital' && <span style={{ background:'rgba(14,165,233,.9)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>💻 رقمي</span>}
+          {(!p.type || p.type === 'product') && isNew && <span style={{ background:'rgba(0,200,150,.9)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99,letterSpacing:'.05em' }}>✨ جديد</span>}
+          {(!p.type || p.type === 'product') && p.stock <= 5 && p.stock > 0 && <span style={{ background:'rgba(245,158,11,.9)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>⚡ آخر {p.stock}</span>}
+          {p.sales > 10 && <span style={{ background:'rgba(255,106,0,.9)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>🔥 الأكثر طلباً</span>}
+          {(!p.type || p.type === 'product') && p.stock === 0 && <span style={{ background:'rgba(0,0,0,.7)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>نفذ المخزون</span>}
         </div>
 
         {/* Like */}
@@ -162,17 +167,18 @@ function ProductCard({ p, onAdd, onView, currency }: { p:SProduct; onAdd:(p:SPro
         )}
 
         {/* Quick add — shows on hover */}
-        <button onClick={e=>{e.stopPropagation();if(p.stock>0)onAdd(p);}}
+        <button onClick={e=>{e.stopPropagation();if(p.type==='service'||p.type==='digital'||p.stock>0)onAdd(p);}}
           style={{
             position:'absolute',bottom:0,left:0,right:0,height:40,
-            background:'linear-gradient(135deg,#FF4D1A,#ff6b42)',
-            border:'none',color:'#fff',fontSize:13,fontWeight:800,cursor:p.stock>0?'pointer':'not-allowed',
+            background:'linear-gradient(135deg,#FF6A00,#ff6b42)',
+            border:'none',color:'#fff',fontSize:13,fontWeight:800,
+            cursor:(p.type==='service'||p.type==='digital'||p.stock>0)?'pointer':'not-allowed',
             display:'flex',alignItems:'center',justifyContent:'center',gap:7,
             transition:'all .25s ease',
-            opacity:hover&&p.stock>0?1:0,
-            transform:hover&&p.stock>0?'translateY(0)':'translateY(8px)',
+            opacity:hover&&(p.type==='service'||p.type==='digital'||p.stock>0)?1:0,
+            transform:hover&&(p.type==='service'||p.type==='digital'||p.stock>0)?'translateY(0)':'translateY(8px)',
           }}>
-          <ShoppingCart size={14}/> أضف للسلة سريعاً
+          <ShoppingCart size={14}/> {p.type==='service'?'احجز الآن':p.type==='digital'?'اشتر الآن':'أضف للسلة سريعاً'}
         </button>
       </div>
 
@@ -211,6 +217,8 @@ function ProductModal({ p, cart, onClose, currency, userId }: { p:SProduct; cart
   const [color, setColor] = useState(p.colors?.[0]||'');
   const [qty,   setQty]   = useState(1);
   const [added, setAdded] = useState(false);
+  const firstColorImg = p.colors?.[0] && p.colorImages?.[p.colors[0]];
+  const [activeImage, setActiveImage] = useState(firstColorImg || p.imageUrl || '');
 
   const handleAdd = () => {
     cart.add(p, size, color);
@@ -226,10 +234,10 @@ function ProductModal({ p, cart, onClose, currency, userId }: { p:SProduct; cart
         background:'var(--panel)',borderRadius:'24px 24px 0 0',width:'100%',maxWidth:520,
         maxHeight:'90vh',overflowY:'auto',padding:'0 0 24px',
       }}>
-        {/* Image */}
-        <div style={{ height:260,position:'relative',background:p.imageUrl?'#000':'var(--void2)' }}>
-          {p.imageUrl
-            ? <img src={p.imageUrl} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} />
+        {/* Main image */}
+        <div style={{ height:260,position:'relative',background:activeImage?'#000':'var(--void2)',flexShrink:0 }}>
+          {activeImage
+            ? <img src={activeImage} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover',transition:'opacity .2s' }} />
             : <div style={{ width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:80 }}>{p.emoji||'📦'}</div>
           }
           <button onClick={onClose} style={{ position:'absolute',top:14,left:14,width:34,height:34,borderRadius:'50%',background:'rgba(0,0,0,.5)',border:'none',color:'#fff',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>
@@ -237,26 +245,77 @@ function ProductModal({ p, cart, onClose, currency, userId }: { p:SProduct; cart
           </button>
           {p.sales > 0 && <div style={{ position:'absolute',bottom:14,right:14,background:'var(--ember)',color:'#fff',fontSize:11,fontWeight:700,padding:'3px 10px',borderRadius:99 }}>{p.sales}+ مبيعة</div>}
         </div>
+        {/* Image thumbnails — shown when product has multiple images */}
+        {(p.images?.length > 0) && (() => {
+          const allImgs = [p.imageUrl, ...(p.images||[])].filter((img,i,arr) => img && arr.indexOf(img)===i);
+          if (allImgs.length <= 1) return null;
+          return (
+            <div style={{ display:'flex',gap:6,overflowX:'auto',padding:'8px 14px',background:'var(--void2)',borderBottom:'1px solid var(--border)' }}>
+              {allImgs.map((img,i) => (
+                <button key={i} onClick={()=>setActiveImage(img)} style={{
+                  flexShrink:0,width:48,height:48,borderRadius:7,overflow:'hidden',
+                  border:`2px solid ${activeImage===img?'var(--ember)':'var(--border2)'}`,
+                  background:'var(--void3)',cursor:'pointer',padding:0,transition:'border-color .15s',
+                }}>
+                  <img src={img} alt="" style={{ width:'100%',height:'100%',objectFit:'cover' }} loading="lazy" />
+                </button>
+              ))}
+            </div>
+          );
+        })()}
 
         <div style={{ padding:'20px 20px 0' }}>
           <div style={{ fontSize:11,color:'var(--ink3)',marginBottom:4 }}>{p.category} {p.sku ? `· #${p.sku}` : ''}</div>
           <h2 style={{ fontSize:20,fontWeight:900,color:'var(--ink1)',marginBottom:8 }}>{p.name}</h2>
           {p.description && <p style={{ fontSize:13,color:'var(--ink2)',lineHeight:1.6,marginBottom:14 }}>{p.description}</p>}
 
+          {/* Custom Fields */}
+          {p.customFields && p.customFields.filter(f => f.value).length > 0 && (
+            <div style={{ display:'flex',flexDirection:'column',gap:6,marginBottom:14,padding:'12px 14px',background:'var(--void2)',borderRadius:10,border:'1px solid var(--border)' }}>
+              {p.customFields.filter(f => f.value).map(f => (
+                <div key={f.id} style={{ display:'flex',justifyContent:'space-between',alignItems:'center',gap:8 }}>
+                  <span style={{ fontSize:11,fontWeight:700,color:'var(--ink3)' }}>{f.label}</span>
+                  {f.type === 'boolean'
+                    ? <span style={{ fontSize:11,fontWeight:700,color:f.value==='true'?'var(--mint)':'var(--ember)' }}>{f.value==='true'?'✅ نعم':'❌ لا'}</span>
+                    : f.type === 'color'
+                      ? <span style={{ display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:700,color:'var(--ink2)' }}>
+                          <span style={{ width:14,height:14,borderRadius:'50%',background:f.value,border:'1px solid var(--border)',display:'inline-block',flexShrink:0 }}/>
+                          {f.value}
+                        </span>
+                      : <span style={{ fontSize:11,fontWeight:700,color:'var(--ink2)' }}>{f.value}</span>
+                  }
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Price */}
           <div style={{ fontSize:28,fontWeight:900,color:'var(--ember)',letterSpacing:'-0.04em',marginBottom:18 }}>
             {p.price.toLocaleString()} {currency}
           </div>
 
-          {/* Sizes */}
-          {p.sizes?.length > 0 && (
+          {/* Service meta */}
+          {p.type === 'service' && (p.duration || p.workArea) && (
+            <div style={{ display:'flex',flexWrap:'wrap',gap:8,marginBottom:14 }}>
+              {p.duration && <span style={{ display:'flex',alignItems:'center',gap:5,fontSize:12,color:'var(--ink2)',background:'var(--void2)',border:'1px solid var(--border)',borderRadius:99,padding:'4px 12px' }}>⏱ {p.duration}</span>}
+              {p.workArea && <span style={{ display:'flex',alignItems:'center',gap:5,fontSize:12,color:'var(--ink2)',background:'var(--void2)',border:'1px solid var(--border)',borderRadius:99,padding:'4px 12px' }}>📍 {p.workArea}</span>}
+            </div>
+          )}
+          {/* Digital badge */}
+          {p.type === 'digital' && (
+            <div style={{ marginBottom:14,padding:'8px 14px',background:'rgba(14,165,233,.1)',border:'1px solid rgba(14,165,233,.3)',borderRadius:8,fontSize:12,color:'var(--ink2)' }}>
+              💻 منتج رقمي — سيُرسل إليك مباشرة بعد التأكيد
+            </div>
+          )}
+          {/* Sizes — products only */}
+          {(!p.type || p.type === 'product') && p.sizes?.length > 0 && (
             <div style={{ marginBottom:14 }}>
               <div style={{ fontSize:11,fontWeight:700,color:'var(--ink3)',marginBottom:8 }}>المقاس</div>
               <div style={{ display:'flex',gap:8,flexWrap:'wrap' }}>
                 {p.sizes.map(s => (
                   <button key={s} onClick={()=>setSize(s)} style={{
                     padding:'6px 14px',borderRadius:8,border:`1.5px solid ${size===s?'var(--ember)':'var(--border2)'}`,
-                    background:size===s?'rgba(255,77,26,.12)':'transparent',
+                    background:size===s?'rgba(255,106,0,.12)':'transparent',
                     color:size===s?'var(--ember2)':'var(--ink2)',
                     fontSize:13,fontWeight:600,cursor:'pointer',transition:'all .15s',
                   }}>{s}</button>
@@ -271,19 +330,16 @@ function ProductModal({ p, cart, onClose, currency, userId }: { p:SProduct; cart
               <div style={{ fontSize:11,fontWeight:700,color:'var(--ink3)',marginBottom:8 }}>اللون</div>
               <div style={{ display:'flex',gap:8,flexWrap:'wrap' }}>
                 {p.colors.map(clr => {
-                  const colorImg = (p as any).colorImages?.[clr];
+                  const colorImg = p.colorImages?.[clr];
                   return (
                     <button key={clr} onClick={()=>{
                       setColor(clr);
-                      // Update displayed image if color has its own image
-                      if (colorImg) {
-                        // We'll handle via state
-                      }
+                      setActiveImage(colorImg || p.imageUrl || '');
                     }} style={{
                       padding: colorImg ? '4px' : '6px 14px',
                       borderRadius: colorImg ? 10 : 8,
                       border:`2px solid ${color===clr?'var(--ember)':'var(--border2)'}`,
-                      background:color===clr?'rgba(255,77,26,.12)':'transparent',
+                      background:color===clr?'rgba(255,106,0,.12)':'transparent',
                       cursor:'pointer',transition:'all .15s',
                       display:'flex',flexDirection:'column',alignItems:'center',gap:4,
                     }}>
@@ -299,12 +355,6 @@ function ProductModal({ p, cart, onClose, currency, userId }: { p:SProduct; cart
                   );
                 })}
               </div>
-              {/* Show color-specific image */}
-              {color && (p as any).colorImages?.[color] && (p as any).colorImages[color] !== p.imageUrl && (
-                <div style={{ marginTop:10,borderRadius:12,overflow:'hidden',height:140 }}>
-                  <img src={(p as any).colorImages[color]} alt={color} style={{ width:'100%',height:'100%',objectFit:'cover' }} />
-                </div>
-              )}
             </div>
           )}
 
@@ -334,9 +384,9 @@ function ProductModal({ p, cart, onClose, currency, userId }: { p:SProduct; cart
           <div style={{ display:'flex',alignItems:'center',gap:12,marginBottom:20 }}>
             <div style={{ fontSize:11,fontWeight:700,color:'var(--ink3)' }}>الكمية</div>
             <div style={{ display:'flex',alignItems:'center',gap:8,background:'var(--void2)',borderRadius:8,padding:'4px 8px' }}>
-              <button onClick={()=>setQty(q=>Math.max(1,q-1))} style={{ width:26,height:26,borderRadius:6,background:'var(--panel)',border:'1px solid var(--border)',cursor:'pointer',color:'var(--ink2)',display:'flex',alignItems:'center',justifyContent:'center' }}><Minus size={12}/></button>
-              <span style={{ fontSize:15,fontWeight:700,color:'var(--ink1)',minWidth:24,textAlign:'center' }}>{qty}</span>
-              <button onClick={()=>setQty(q=>Math.min(p.stock,q+1))} style={{ width:26,height:26,borderRadius:6,background:'var(--panel)',border:'1px solid var(--border)',cursor:'pointer',color:'var(--ink2)',display:'flex',alignItems:'center',justifyContent:'center' }}><Plus size={12}/></button>
+              <button onClick={()=>setQty(q=>Math.max(1,q-1))} style={{ width:36,height:36,borderRadius:6,background:'var(--panel)',border:'1px solid var(--border)',cursor:'pointer',color:'var(--ink2)',display:'flex',alignItems:'center',justifyContent:'center' }}><Minus size={14}/></button>
+              <span style={{ fontSize:15,fontWeight:700,color:'var(--ink1)',minWidth:28,textAlign:'center' }}>{qty}</span>
+              <button onClick={()=>setQty(q=>Math.min(p.stock,q+1))} style={{ width:36,height:36,borderRadius:6,background:'var(--panel)',border:'1px solid var(--border)',cursor:'pointer',color:'var(--ink2)',display:'flex',alignItems:'center',justifyContent:'center' }}><Plus size={14}/></button>
             </div>
             <span style={{ fontSize:11,color:'var(--ink3)' }}>{p.stock} متوفرة</span>
           </div>
@@ -346,9 +396,12 @@ function ProductModal({ p, cart, onClose, currency, userId }: { p:SProduct; cart
             border:'none',borderRadius:'var(--r)',color:'#fff',fontSize:15,fontWeight:700,
             cursor:'pointer',transition:'all .2s',
             display:'flex',alignItems:'center',justifyContent:'center',gap:8,
-            boxShadow:`0 4px 16px ${added?'rgba(0,200,150,.3)':'rgba(255,77,26,.35)'}`,
+            boxShadow:`0 4px 16px ${added?'rgba(0,200,150,.3)':'rgba(255,106,0,.35)'}`,
           }}>
-            {added ? <><Check size={18}/> تمت الإضافة!</> : <><ShoppingCart size={16}/> أضف للسلة — {(p.price*qty).toLocaleString()} {currency}</>}
+            {added
+              ? <><Check size={18}/> {p.type==='service'?'تم الحجز!':'تمت الإضافة!'}</>
+              : <><ShoppingCart size={16}/> {p.type==='service'?'احجز الآن':p.type==='digital'?'اشتر الآن':'أضف للسلة'} — {(p.price*qty).toLocaleString()} {currency}</>
+            }
           </button>
         </div>
       </div>
@@ -370,9 +423,27 @@ function CartSidebar({ cart, storeInfo, userId, onClose, onOrderSuccess }: { car
   const [orderCode, setOrderCode] = useState('');
   const cur = storeInfo.brand.currency || 'MAD';
   const deliveryCost = getDeliveryCost(form.city, storeInfo.deliveryCosts);
-  const grandTotal   = cart.total + deliveryCost;
+  const grandTotal   = Math.max(0, cart.total - couponDiscount) + deliveryCost;
 
   const filteredCities = MOROCCAN_CITIES.filter(c => c.includes(citySearch) || citySearch === '');
+
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    try {
+      const r = await fetch(`/api/coupons/validate?code=${encodeURIComponent(couponCode)}&userId=${userId}&total=${cart.total}`);
+      if (r.ok) {
+        const d = await r.json();
+        setCouponDiscount(d.discount || 0);
+        setCouponMsg(d.discount > 0 ? `✅ خصم ${d.discount} ${cur} تم تطبيقه` : '❌ الكود غير صحيح');
+      } else {
+        setCouponDiscount(0);
+        setCouponMsg('❌ الكود غير صحيح أو منتهي الصلاحية');
+      }
+    } catch {
+      setCouponDiscount(0);
+      setCouponMsg('❌ تعذر التحقق من الكود');
+    }
+  };
 
   const handleOrder = async () => {
     if (!form.name || !form.phone || !form.city) {
@@ -418,7 +489,7 @@ function CartSidebar({ cart, storeInfo, userId, onClose, onOrderSuccess }: { car
   return (
     <div style={{ position:'fixed',inset:0,zIndex:400,display:'flex' }}>
       <div onClick={onClose} style={{ flex:1,background:'rgba(0,0,0,.6)',backdropFilter:'blur(4px)' }} />
-      <div style={{ width:Math.min(400,window.innerWidth),background:'var(--panel)',borderRight:'1px solid var(--border)',display:'flex',flexDirection:'column',overflowY:'auto',animation:'slide-in .25s ease' }}>
+      <div style={{ width:'min(400px,100vw)',background:'var(--panel)',borderRight:'1px solid var(--border)',display:'flex',flexDirection:'column',overflowY:'auto',animation:'slide-in .25s ease' }}>
 
         {/* Header */}
         <div style={{ padding:'16px 18px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:10 }}>
@@ -474,7 +545,7 @@ function CartSidebar({ cart, storeInfo, userId, onClose, onOrderSuccess }: { car
                     width:'100%',height:48,background:'var(--ember)',border:'none',
                     borderRadius:'var(--r)',color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer',
                     display:'flex',alignItems:'center',justifyContent:'center',gap:8,
-                    boxShadow:'0 4px 16px rgba(255,77,26,.35)',
+                    boxShadow:'0 4px 16px rgba(255,106,0,.35)',
                   }}>
                     متابعة الطلب <ArrowRight size={16}/>
                   </button>
@@ -524,7 +595,7 @@ function CartSidebar({ cart, storeInfo, userId, onClose, onOrderSuccess }: { car
                 <div style={{ display:'flex',gap:8 }}>
                   {[['cod','💵 دفع عند الاستلام'],['virement','🏦 تحويل بنكي']].map(([v,l]) => (
                     <button key={v} onClick={()=>setForm(f=>({...f,paymentMethod:v as any}))}
-                      style={{ flex:1,padding:'10px',borderRadius:10,border:`1.5px solid ${form.paymentMethod===v?'var(--ember)':'var(--border)'}`,background:form.paymentMethod===v?'rgba(255,77,26,.1)':'transparent',color:form.paymentMethod===v?'var(--ember2)':'var(--ink2)',fontSize:12,fontWeight:700,cursor:'pointer' }}>
+                      style={{ flex:1,padding:'10px',borderRadius:10,border:`1.5px solid ${form.paymentMethod===v?'var(--ember)':'var(--border)'}`,background:form.paymentMethod===v?'rgba(255,106,0,.1)':'transparent',color:form.paymentMethod===v?'var(--ember2)':'var(--ink2)',fontSize:12,fontWeight:700,cursor:'pointer' }}>
                       {l}
                     </button>
                   ))}
@@ -550,31 +621,40 @@ function CartSidebar({ cart, storeInfo, userId, onClose, onOrderSuccess }: { car
                 أريد استقبال العروض والمنتجات الجديدة عبر واتساب
               </label>
 
-              {/* Summary */}
-              {form.city && (
-                <div style={{ background:'var(--void2)',borderRadius:'var(--r)',padding:'14px 16px',border:'1px solid var(--border)' }}>
-                  <div style={{ fontSize:12,fontWeight:700,color:'var(--ink3)',marginBottom:10 }}>ملخص الطلب</div>
-                  {cart.items.map((item,i)=>(
-                    <div key={i} style={{ display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--ink2)',marginBottom:5 }}>
-                      <span>{item.product.name} x{item.quantity}</span>
-                      <span>{(item.product.price*item.quantity).toLocaleString()} {cur}</span>
-                    </div>
-                  ))}
-                  <div style={{ display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--ink2)',paddingTop:8,borderTop:'1px solid var(--border)',marginTop:5 }}>
-                    <span>التوصيل إلى {form.city}</span><span>{deliveryCost} {cur}</span>
+              {/* Order summary — always visible in checkout */}
+              <div style={{ background:'var(--void2)',borderRadius:'var(--r)',padding:'14px 16px',border:'1px solid var(--border)' }}>
+                <div style={{ fontSize:12,fontWeight:700,color:'var(--ink3)',marginBottom:10,letterSpacing:'.06em' }}>ملخص الطلب</div>
+                {cart.items.map((item,i)=>(
+                  <div key={i} style={{ display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--ink2)',marginBottom:5,gap:8 }}>
+                    <span style={{ flex:1 }}>{item.product.name}{item.size?` (${item.size})`:''}  {item.color?`· ${item.color}`:''} ×{item.quantity}</span>
+                    <span style={{ flexShrink:0,fontWeight:700 }}>{(item.product.price*item.quantity).toLocaleString()} {cur}</span>
                   </div>
-                  <div style={{ display:'flex',justifyContent:'space-between',fontSize:16,fontWeight:900,color:'var(--ink1)',paddingTop:10,marginTop:5 }}>
-                    <span>الإجمالي</span>
+                ))}
+                <div style={{ paddingTop:8,borderTop:'1px solid var(--border)',marginTop:8,display:'flex',flexDirection:'column',gap:5 }}>
+                  <div style={{ display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--ink2)' }}>
+                    <span>المجموع الفرعي</span><span>{cart.total.toLocaleString()} {cur}</span>
+                  </div>
+                  {couponDiscount > 0 && (
+                    <div style={{ display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--mint)',fontWeight:700 }}>
+                      <span>🏷️ الخصم</span><span>-{couponDiscount.toLocaleString()} {cur}</span>
+                    </div>
+                  )}
+                  <div style={{ display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--ink2)' }}>
+                    <span>🚚 التوصيل إلى {form.city||'—'}</span>
+                    <span>{form.city ? `${deliveryCost} ${cur}` : 'يُحسب بعد اختيار المدينة'}</span>
+                  </div>
+                  <div style={{ display:'flex',justifyContent:'space-between',fontSize:16,fontWeight:900,color:'var(--ink1)',paddingTop:8,marginTop:2,borderTop:'1px solid var(--border)' }}>
+                    <span>💰 الإجمالي</span>
                     <span style={{ color:'var(--ember)' }}>{grandTotal.toLocaleString()} {cur}</span>
                   </div>
                 </div>
-              )}
+              </div>
 
               <button onClick={handleOrder} disabled={loading} style={{
                 width:'100%',height:52,background:'var(--ember)',border:'none',
                 borderRadius:'var(--r)',color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer',
                 display:'flex',alignItems:'center',justifyContent:'center',gap:8,
-                boxShadow:'0 4px 16px rgba(255,77,26,.35)',opacity:loading?0.7:1,
+                boxShadow:'0 4px 16px rgba(255,106,0,.35)',opacity:loading?0.7:1,
               }}>
                 {loading ? '⟳ جارٍ إرسال الطلب...' : <><MessageCircle size={16}/> تأكيد الطلب عبر واتساب</>}
               </button>
@@ -643,7 +723,7 @@ function FloatingChat({ userId, storeInfo }: { userId:string; storeInfo:StoreInf
         position:'fixed',bottom:24,left:24,width:56,height:56,borderRadius:'50%',
         background:'var(--ember)',border:'none',color:'#fff',cursor:'pointer',zIndex:200,
         display:'flex',alignItems:'center',justifyContent:'center',
-        boxShadow:'0 4px 20px rgba(255,77,26,.45)',transition:'all .2s',
+        boxShadow:'0 4px 20px rgba(255,106,0,.45)',transition:'all .2s',
       }}>
         {open ? <X size={22}/> : <Bot size={22}/>}
         {unread > 0 && !open && (
@@ -757,7 +837,7 @@ function TrackingModal({ userId, storeInfo, onClose }: { userId:string; storeInf
         <div style={{ display:'flex',gap:6,marginBottom:12 }}>
           {[['code','🔑 كود التتبع'],['phone','📱 رقم الهاتف']].map(([m,l])=>(
             <button key={m} onClick={()=>{setMode(m as 'code'|'phone');setQuery('');setSearched(false);setSingleOrder(null);setOrders([])}}
-              style={{ flex:1,padding:'7px',borderRadius:8,border:`1.5px solid ${mode===m?'var(--ember)':'var(--border)'}`,background:mode===m?'rgba(255,77,26,.1)':'var(--void2)',color:mode===m?'var(--ember2)':'var(--ink3)',fontSize:12,fontWeight:700,cursor:'pointer' }}>
+              style={{ flex:1,padding:'7px',borderRadius:8,border:`1.5px solid ${mode===m?'var(--ember)':'var(--border)'}`,background:mode===m?'rgba(255,106,0,.1)':'var(--void2)',color:mode===m?'var(--ember2)':'var(--ink3)',fontSize:12,fontWeight:700,cursor:'pointer' }}>
               {l}
             </button>
           ))}
@@ -928,11 +1008,11 @@ export default function Storefront() {
         display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,
       }}>
         <div style={{ display:'flex',alignItems:'center',gap:10 }}>
-          <div style={{ width:38,height:38,borderRadius:10,overflow:'hidden',background:'#07080D',border:'1px solid rgba(255,255,255,.1)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,boxShadow:'0 2px 8px rgba(255,77,26,.2)' }}>
+          <div style={{ width:38,height:38,borderRadius:10,overflow:'hidden',background:'#07080D',border:'1px solid rgba(255,255,255,.1)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,boxShadow:'0 2px 8px rgba(255,106,0,.2)' }}>
             {brand.logo
               ? <img src={brand.logo} alt="logo" style={{ width:'100%',height:'100%',objectFit:'contain' }}/>
               : <img src="/sahar-logo-text.png" alt="S" style={{ width:'100%',height:'100%',objectFit:'contain' }}
-                  onError={e => { (e.currentTarget as HTMLImageElement).style.display='none'; (e.currentTarget.parentElement as HTMLElement).innerHTML='<span style="font-size:16px;font-weight:900;color:#FF4D1A">' + (brand.name?.[0]?.toUpperCase()||'S') + '</span>'; }}
+                  onError={e => { (e.currentTarget as HTMLImageElement).style.display='none'; (e.currentTarget.parentElement as HTMLElement).innerHTML='<span style="font-size:16px;font-weight:900;color:#FF6A00">' + (brand.name?.[0]?.toUpperCase()||'S') + '</span>'; }}
                 />
             }
           </div>
@@ -967,7 +1047,7 @@ export default function Storefront() {
 
       {/* ── HERO ─────────────────────────────── */}
       <div style={{ textAlign:'center',padding:'32px 20px 20px',position:'relative',overflow:'hidden' }}>
-        <div style={{ position:'absolute',inset:0,background:'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,77,26,.06) 0%, transparent 70%)',pointerEvents:'none' }}/>
+        <div style={{ position:'absolute',inset:0,background:'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,106,0,.06) 0%, transparent 70%)',pointerEvents:'none' }}/>
         <h1 style={{ fontSize:'clamp(22px,5vw,38px)',fontWeight:900,color:'var(--ink1)',letterSpacing:'-0.03em',marginBottom:8,lineHeight:1.2 }}>
           {brand.name}
         </h1>
@@ -1014,7 +1094,7 @@ export default function Storefront() {
             <button key={cat} onClick={()=>setActiveTab(cat)} style={{
               flexShrink:0,padding:'6px 14px',borderRadius:99,fontSize:12,fontWeight:600,cursor:'pointer',
               border:`1px solid ${activeTab===cat?'var(--ember)':'var(--border)'}`,
-              background:activeTab===cat?'rgba(255,77,26,.12)':'var(--panel)',
+              background:activeTab===cat?'rgba(255,106,0,.12)':'var(--panel)',
               color:activeTab===cat?'var(--ember2)':'var(--ink2)',transition:'all .15s',
             }}>{cat==='all'?'الكل':cat}</button>
           ))}
@@ -1049,12 +1129,12 @@ export default function Storefront() {
             <div style={{ display:'flex',gap:10,overflowX:'auto',paddingBottom:4 }}>
               {popular.map(p => (
                 <div key={p.id} onClick={()=>setViewProduct(p)}
-                  style={{ flexShrink:0,width:240,borderRadius:16,overflow:'hidden',cursor:'pointer',background:'var(--panel)',border:'1px solid rgba(255,77,26,.2)',boxShadow:'0 4px 20px rgba(255,77,26,.1)',transition:'all .2s' }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform='translateY(-3px)';(e.currentTarget as HTMLElement).style.borderColor='rgba(255,77,26,.5)';}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform='';(e.currentTarget as HTMLElement).style.borderColor='rgba(255,77,26,.2)';}}>
+                  style={{ flexShrink:0,width:240,borderRadius:16,overflow:'hidden',cursor:'pointer',background:'var(--panel)',border:'1px solid rgba(255,106,0,.2)',boxShadow:'0 4px 20px rgba(255,106,0,.1)',transition:'all .2s' }}
+                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform='translateY(-3px)';(e.currentTarget as HTMLElement).style.borderColor='rgba(255,106,0,.5)';}}
+                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform='';(e.currentTarget as HTMLElement).style.borderColor='rgba(255,106,0,.2)';}}>
                   <div style={{ height:120,position:'relative',background:p.imageUrl?'#000':'var(--void2)',overflow:'hidden' }}>
                     {p.imageUrl ? <img src={p.imageUrl} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} loading="lazy"/> : <div style={{ width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:40 }}>{p.emoji||'📦'}</div>}
-                    <span style={{ position:'absolute',top:8,right:8,background:'rgba(255,77,26,.9)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>🔥 #{popular.indexOf(p)+1}</span>
+                    <span style={{ position:'absolute',top:8,right:8,background:'rgba(255,106,0,.9)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>🔥 #{popular.indexOf(p)+1}</span>
                   </div>
                   <div style={{ padding:'10px 12px',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
                     <div>
@@ -1070,7 +1150,7 @@ export default function Storefront() {
         );
       })()}
 
-      <div style={{ padding:'0 16px 120px',display:viewMode==='list'?'flex':'grid', flexDirection:viewMode==='list'?'column':'row', gridTemplateColumns:viewMode==='grid'?'repeat(auto-fill,minmax(160px,1fr))':'none', gap:viewMode==='list'?10:14 }}>
+      <div style={{ padding:'0 16px 120px',display:viewMode==='list'?'flex':'grid', flexDirection:viewMode==='list'?'column':'row', gridTemplateColumns:viewMode==='grid'?'repeat(auto-fill,minmax(140px,1fr))':'none', gap:viewMode==='list'?10:14 }}>
         {filtered.map(p => (
           <ProductCard key={p.id} p={p} currency={cur}
             onAdd={handleAddToCart}
@@ -1093,7 +1173,7 @@ export default function Storefront() {
             width:'100%',height:52,background:'var(--ember)',border:'none',borderRadius:'var(--r)',
             color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer',
             display:'flex',alignItems:'center',justifyContent:'center',gap:10,
-            boxShadow:'0 8px 24px rgba(255,77,26,.45)',
+            boxShadow:'0 8px 24px rgba(255,106,0,.45)',
           }}>
             <ShoppingCart size={18}/>
             عرض السلة ({cart.count} منتج)

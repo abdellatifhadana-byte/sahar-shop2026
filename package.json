@@ -10,14 +10,18 @@
     "dev": "vite",
     "build": "vite build",
     "postinstall": "cd server && npm install",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "lint": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx}\" \"server/**/*.js\""
   },
   "dependencies": {
     "clsx": "^2.1.1",
     "lucide-react": "^0.383.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-is": "^19.2.6",
     "react-router-dom": "^7.1.0",
+    "recharts": "^3.8.1",
     "tailwind-merge": "^2.5.5",
     "zod": "^3.23.8"
   },
