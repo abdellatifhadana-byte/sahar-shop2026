@@ -1212,7 +1212,7 @@ export default function Storefront() {
         {[
           { id: 'hero', label: 'الرئيسية', icon: <Sparkles size={20} /> },
           { id: 'products', label: 'منتجات', icon: <Package size={20} /> },
-          { id: 'services', label: 'خدمات', icon: <Briefcase size={20} /> },
+          { id: 'services', label: 'خد مات', icon: <Briefcase size={20} /> },
           { id: 'offers', label: 'عروض', icon: <Tag size={20} /> },
           { id: 'footer', label: 'المزيد', icon: <Shield size={20} /> },
         ].map((item) => (
