@@ -1,1194 +1,1232 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Search, ShoppingCart, X, MessageCircle, Phone, Share2,
-  Plus, Minus, Check, Package, Truck, MapPin, ChevronRight,
-  Star, Zap, Heart, Send, Bot, ArrowRight, RotateCcw
+  Search,
+  ShoppingCart,
+  Sparkles,
+  Package,
+  Briefcase,
+  TrendingUp,
+  Tag,
+  Shield,
+  Truck,
+  CheckCircle2,
+  Headphones,
+  Clock,
+  MapPin,
+  Star,
+  ArrowLeft,
+  ChevronLeft,
+  Menu,
+  X,
 } from 'lucide-react';
 
-// ══════════════════════════════════════════════
-// TYPES
-// ══════════════════════════════════════════════
-interface CustomField { id:string; label:string; type:string; options:string[]; value:string; }
-interface SProduct {
-  id:string; name:string; description:string; price:number; cost?:number;
-  stock:number; category:string; sizes:string[]; colors:string[];
-  status:string; emoji:string; imageUrl:string; images:string[]; sku?:string;
-  sales:number; views?:number; colorImages?:Record<string,string>; createdAt?:string;
-  type?:'product'|'service'|'digital'; duration?:string; workArea?:string; portfolio?:string[];
-  customFields?:CustomField[];
-}
-interface CartItem { product:SProduct; quantity:number; size:string; color:string; }
-interface StoreInfo { brand:{name:string;phone:string;currency:string;logo?:string;description?:string;instagram?:string;facebook?:string;whatsapp?:string;email?:string}; deliveryCosts?:Record<string,number>; }
-interface ChatMsg { role:'user'|'ai'; content:string; product?:SProduct; }
+/* ═══════════════════════════════════════════════════
+   1. DATA — تم استبدالها بـ API في الإنتاج
+   ═══════════════════════════════════════════════════ */
 
-// ══════════════════════════════════════════════
-// MOROCCAN CITIES + DELIVERY COST
-// ══════════════════════════════════════════════
-const MOROCCAN_CITIES = [
-  'الدار البيضاء','الرباط','فاس','مراكش','طنجة','أكادير','مكناس','وجدة',
-  'سلا','تطوان','القنيطرة','الجديدة','بني ملال','خريبكة','تازة','نادور',
-  'الحسيمة','برشيد','سطات','آسفي','الرحامنة','قلعة السراغنة','خنيفرة',
-  'إفران','ورزازات','زاكورة','الراشيدية','فيكيك','طاطا','ميدلت',
-];
-
-const DEFAULT_COSTS: Record<string,number> = {
-  'الدار البيضاء':20,'الرباط':25,'فاس':30,'مراكش':30,'طنجة':35,
-  'أكادير':35,'مكناس':30,'وجدة':40,'سلا':25,'تطوان':35,
-  'القنيطرة':30,'الجديدة':35,'بني ملال':40,
+type Product = {
+  id: number;
+  name: string;
+  category: string;
+  description: string;
+  price: number;
+  oldPrice: number;
+  rating: number;
+  accent: string;
+  glow: string;
+  tag: string;
+  icon: 'device' | 'fashion' | 'home' | 'beauty' | 'gaming' | 'audio';
 };
 
-function getDeliveryCost(city:string, costs?:Record<string,number>):number {
-  const allCosts = { ...DEFAULT_COSTS, ...(costs||{}) };
-  for (const [k,v] of Object.entries(allCosts)) {
-    if (city.includes(k) || k.includes(city)) return v;
-  }
-  return allCosts['default'] || 40;
-}
+type Service = {
+  id: number;
+  name: string;
+  duration: string;
+  city: string;
+  rating: number;
+  price: string;
+  description: string;
+  accent: string;
+  glow: string;
+  tag: string;
+  icon: 'fix' | 'design' | 'delivery' | 'install' | 'support';
+};
 
-// ══════════════════════════════════════════════
-// HOOKS
-// ══════════════════════════════════════════════
-function useStorefront(userId:string) {
-  const [products, setProducts] = useState<SProduct[]>([]);
-  const [storeInfo, setStoreInfo] = useState<StoreInfo|null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]   = useState('');
+const products: Product[] = [
+  {
+    id: 1,
+    name: 'ساعة ذكية Ultra Fit',
+    category: 'إلكترونيات',
+    description: 'شاشة AMOLED، مقاومة للماء، وتتبع صحي كامل.',
+    price: 1290,
+    oldPrice: 1540,
+    rating: 4.9,
+    accent: '#7c6ffa',
+    glow: 'rgba(124,111,250,0.28)',
+    tag: 'الأكثر طلبًا',
+    icon: 'device',
+  },
+  {
+    id: 2,
+    name: 'حقيبة Office Glass',
+    category: 'موضة وإكسسوارات',
+    description: 'تصميم عملي فاخر يناسب العمل والتنقل اليومي.',
+    price: 620,
+    oldPrice: 790,
+    rating: 4.8,
+    accent: '#00c2a8',
+    glow: 'rgba(0,194,168,0.24)',
+    tag: 'شحن سريع',
+    icon: 'fashion',
+  },
+  {
+    id: 3,
+    name: 'مصباح Aura Desk',
+    category: 'المنزل الذكي',
+    description: 'إضاءة هادئة بثلاث درجات مع لمسة زجاجية عصرية.',
+    price: 460,
+    oldPrice: 590,
+    rating: 4.7,
+    accent: '#3ba0ff',
+    glow: 'rgba(59,160,255,0.24)',
+    tag: 'جديد 2026',
+    icon: 'home',
+  },
+  {
+    id: 4,
+    name: 'مجموعة Glow Care',
+    category: 'الجمال والعناية',
+    description: 'روتين يومي أنيق للعناية مع مكونات لطيفة وفعالة.',
+    price: 350,
+    oldPrice: 430,
+    rating: 4.9,
+    accent: '#f472b6',
+    glow: 'rgba(244,114,182,0.25)',
+    tag: 'عرض حصري',
+    icon: 'beauty',
+  },
+  {
+    id: 5,
+    name: 'كرسي Gamer Flow',
+    category: 'ألعاب ومكاتب',
+    description: 'راحة احترافية، خامات ممتازة، ودعم طويل للجلسات.',
+    price: 1980,
+    oldPrice: 2290,
+    rating: 4.8,
+    accent: '#22c55e',
+    glow: 'rgba(34,197,94,0.24)',
+    tag: 'مفضل اللاعبين',
+    icon: 'gaming',
+  },
+  {
+    id: 6,
+    name: 'سماعات Echo Pro',
+    category: 'صوتيات',
+    description: 'عزل ضوضاء ذكي وصوت غني ومكالمات واضحة جدًا.',
+    price: 890,
+    oldPrice: 1090,
+    rating: 4.9,
+    accent: '#facc15',
+    glow: 'rgba(250,204,21,0.24)',
+    tag: 'خصم اليوم',
+    icon: 'audio',
+  },
+];
 
-  useEffect(() => {
-    if (!userId) { setError('رابط المتجر غير صحيح'); setLoading(false); return; }
-    Promise.all([
-      fetch(`/api/products/public/catalog?userId=${userId}`).then(r => r.json()),
-    ]).then(([catalog]) => {
-      setProducts(catalog.products || []);
-      setStoreInfo({ brand: catalog.brand || {}, deliveryCosts: catalog.deliveryCosts });
-      setLoading(false);
-    }).catch(() => { setError('تعذّر تحميل المتجر'); setLoading(false); });
-  }, [userId]);
+const services: Service[] = [
+  {
+    id: 1,
+    name: 'كهربائي منزلي محترف',
+    duration: '2–3 ساعات',
+    city: 'الدار البيضاء',
+    rating: 4.9,
+    price: 'ابتداءً من 180 د.م',
+    description: 'تركيب وصيانة وإنهاء الأعطال بسرعة مع التزام بالمواعيد.',
+    accent: '#3b82f6',
+    glow: 'rgba(59,130,246,0.24)',
+    tag: 'متاح اليوم',
+    icon: 'fix',
+  },
+  {
+    id: 2,
+    name: 'تصميم هوية بصرية',
+    duration: '3–5 أيام',
+    city: 'عن بعد',
+    rating: 5,
+    price: 'ابتداءً من 950 د.م',
+    description: 'شعار، ألوان، ونظام بصري حديث مناسب للبيع والثقة.',
+    accent: '#8b5cf6',
+    glow: 'rgba(139,92,246,0.24)',
+    tag: 'Top Rated',
+    icon: 'design',
+  },
+  {
+    id: 3,
+    name: 'توصيل داخل نفس اليوم',
+    duration: '90 دقيقة',
+    city: 'الرباط',
+    rating: 4.8,
+    price: 'ابتداءً من 45 د.م',
+    description: 'حل سريع واحترافي للطلبات العاجلة والوثائق والطرود.',
+    accent: '#14b8a6',
+    glow: 'rgba(20,184,166,0.24)',
+    tag: 'سريع جدًا',
+    icon: 'delivery',
+  },
+  {
+    id: 4,
+    name: 'تركيب كاميرات ومراقبة',
+    duration: '4–6 ساعات',
+    city: 'مراكش',
+    rating: 4.9,
+    price: 'ابتداءً من 420 د.م',
+    description: 'زيارة، تركيب، وضبط كامل مع شرح الاستخدام والمتابعة.',
+    accent: '#f59e0b',
+    glow: 'rgba(245,158,11,0.22)',
+    tag: 'موثوق',
+    icon: 'install',
+  },
+  {
+    id: 5,
+    name: 'دعم تقني للشركات الصغيرة',
+    duration: 'خلال 24 ساعة',
+    city: 'طنجة',
+    rating: 4.8,
+    price: 'ابتداءً من 300 د.م',
+    description: 'حلول تشغيل، صيانة، ومساندة مستمرة للأجهزة والأنظمة.',
+    accent: '#ec4899',
+    glow: 'rgba(236,72,153,0.22)',
+    tag: 'عقد شهري',
+    icon: 'support',
+  },
+];
 
-  return { products, storeInfo, loading, error };
-}
+/* ═══════════════════════════════════════════════════
+   2. HELPERS
+   ═══════════════════════════════════════════════════ */
 
-// ══════════════════════════════════════════════
-// CART HOOK
-// ══════════════════════════════════════════════
-function useCart() {
-  // Persist cart in localStorage — survives page refresh
-  const [items, setItems] = useState<CartItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('sahar_cart');
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
-  });
+const cn = (...classes: Array<string | false | null | undefined>) =>
+  classes.filter(Boolean).join(' ');
 
-  // Save to localStorage on every change
-  useEffect(() => {
-    try { localStorage.setItem('sahar_cart', JSON.stringify(items)); } catch {}
-  }, [items]);
+const formatPrice = (n: number) =>
+  `${n.toLocaleString('ar-MA')} د.م`;
 
-  const add = (product:SProduct, size:string, color:string) => {
-    setItems(prev => {
-      const existing = prev.find(i => i.product.id===product.id && i.size===size && i.color===color);
-      if (existing) return prev.map(i => i===existing ? {...i,quantity:i.quantity+1} : i);
-      return [...prev, { product, quantity:1, size, color }];
-    });
-  };
-  const remove = (productId:string, size:string, color:string) =>
-    setItems(prev => prev.filter(i => !(i.product.id===productId && i.size===size && i.color===color)));
-  const update = (productId:string, size:string, color:string, qty:number) =>
-    setItems(prev => qty <= 0
-      ? prev.filter(i => !(i.product.id===productId && i.size===size && i.color===color))
-      : prev.map(i => (i.product.id===productId && i.size===size && i.color===color) ? {...i,quantity:qty} : i));
-  const total  = items.reduce((s,i) => s+i.product.price*i.quantity, 0);
-  const count  = items.reduce((s,i) => s+i.quantity, 0);
-  const clear  = () => setItems([]);
-  return { items, add, remove, update, total, count, clear };
-}
+/* ═══════════════════════════════════════════════════
+   3. TOP NAV — Glass floating
+   ═══════════════════════════════════════════════════ */
 
-// ══════════════════════════════════════════════
-// COMPONENTS
-// ══════════════════════════════════════════════
-
-/* Product Card */
-function ProductCard({ p, onAdd, onView, currency }: { p:SProduct; onAdd:(p:SProduct)=>void; onView:(p:SProduct)=>void; currency:string }) {
-  const [liked, setLiked] = useState(false);
-  const [hover, setHover] = useState(false);
-  const isNew = p.createdAt && (Date.now() - new Date(p.createdAt).getTime() < 7*24*60*60*1000);
-
+function TopNav({
+  query,
+  setQuery,
+  onOpenCart,
+  cartCount,
+  onMenu,
+}: {
+  query: string;
+  setQuery: (v: string) => void;
+  onOpenCart: () => void;
+  cartCount: number;
+  onMenu: () => void;
+}) {
   return (
-    <div onClick={() => onView(p)}
-      onMouseEnter={()=>setHover(true)}
-      onMouseLeave={()=>setHover(false)}
-      style={{
-        background:'var(--panel)',
-        border:`1px solid ${hover?'rgba(255,106,0,.3)':'var(--border)'}`,
-        borderRadius:20,overflow:'hidden',cursor:'pointer',
-        transition:'all .22s ease',
-        transform:hover?'translateY(-5px)':'none',
-        boxShadow:hover?'0 12px 40px rgba(0,0,0,.35), 0 0 0 1px rgba(255,106,0,.1)':'none',
-      }}>
-
-      {/* Image area */}
-      <div style={{ height:210,position:'relative',background:p.imageUrl?'#000':'var(--void2)',overflow:'hidden' }}>
-        {p.imageUrl
-          ? <img src={p.imageUrl} alt={p.name}
-              style={{ width:'100%',height:'100%',objectFit:'cover',transition:'transform .4s ease',transform:hover?'scale(1.06)':'scale(1)' }}
-              loading="lazy" />
-          : <div style={{ width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:60 }}>{p.emoji||'📦'}</div>
-        }
-        {/* Gradient bottom */}
-        <div style={{ position:'absolute',bottom:0,left:0,right:0,height:80,background:'linear-gradient(transparent,rgba(0,0,0,.65))' }}/>
-
-        {/* Top badges */}
-        <div style={{ position:'absolute',top:10,right:10,display:'flex',flexDirection:'column',gap:4,alignItems:'flex-end' }}>
-          {p.type === 'service' && <span style={{ background:'rgba(139,92,246,.9)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>🔧 خدمة</span>}
-          {p.type === 'digital' && <span style={{ background:'rgba(14,165,233,.9)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>💻 رقمي</span>}
-          {(!p.type || p.type === 'product') && isNew && <span style={{ background:'rgba(0,200,150,.9)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99,letterSpacing:'.05em' }}>✨ جديد</span>}
-          {(!p.type || p.type === 'product') && p.stock <= 5 && p.stock > 0 && <span style={{ background:'rgba(245,158,11,.9)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>⚡ آخر {p.stock}</span>}
-          {p.sales > 10 && <span style={{ background:'rgba(255,106,0,.9)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>🔥 الأكثر طلباً</span>}
-          {(!p.type || p.type === 'product') && p.stock === 0 && <span style={{ background:'rgba(0,0,0,.7)',backdropFilter:'blur(4px)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>نفذ المخزون</span>}
-        </div>
-
-        {/* Like */}
-        <button onClick={e=>{e.stopPropagation();setLiked(v=>!v)}}
-          style={{ position:'absolute',top:10,left:10,width:32,height:32,borderRadius:'50%',background:'rgba(0,0,0,.45)',backdropFilter:'blur(6px)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all .2s' }}>
-          <Heart size={14} fill={liked?'#ef4444':'none'} color={liked?'#ef4444':'#fff'}/>
-        </button>
-
-        {/* Colors row at bottom */}
-        {p.colors?.length > 0 && (
-          <div style={{ position:'absolute',bottom:10,right:10,left:10,display:'flex',gap:5,justifyContent:'flex-start',alignItems:'center' }}>
-            {(p.colors||[]).slice(0,5).map((clr:string,ci:number) => {
-              const colorMap: Record<string,string> = { 'أسود':'#1a1a1a','أبيض':'#f5f5f5','أحمر':'#ef4444','أزرق':'#3b82f6','أخضر':'#22c55e','رمادي':'#6b7280','بيج':'#d4b896','وردي':'#f472b6','بني':'#92400e','كحلي':'#1e3a5f','زيتي':'#3d5a1e','بنفسجي':'#a855f7','برتقالي':'#f97316','أصفر':'#eab308' };
-              const bg = colorMap[clr] || '#888';
-              return <div key={ci} title={clr} style={{ width:16,height:16,borderRadius:'50%',background:bg,border:'2px solid rgba(255,255,255,.8)',boxShadow:'0 1px 4px rgba(0,0,0,.4)',flexShrink:0 }}/>;
-            })}
-            {(p.colors||[]).length > 5 && <span style={{ fontSize:9,color:'rgba(255,255,255,.7)',fontWeight:700 }}>+{p.colors.length-5}</span>}
-          </div>
-        )}
-
-        {/* Quick add — shows on hover */}
-        <button onClick={e=>{e.stopPropagation();if(p.type==='service'||p.type==='digital'||p.stock>0)onAdd(p);}}
-          style={{
-            position:'absolute',bottom:0,left:0,right:0,height:40,
-            background:'linear-gradient(135deg,#FF6A00,#ff6b42)',
-            border:'none',color:'#fff',fontSize:13,fontWeight:800,
-            cursor:(p.type==='service'||p.type==='digital'||p.stock>0)?'pointer':'not-allowed',
-            display:'flex',alignItems:'center',justifyContent:'center',gap:7,
-            transition:'all .25s ease',
-            opacity:hover&&(p.type==='service'||p.type==='digital'||p.stock>0)?1:0,
-            transform:hover&&(p.type==='service'||p.type==='digital'||p.stock>0)?'translateY(0)':'translateY(8px)',
-          }}>
-          <ShoppingCart size={14}/> {p.type==='service'?'احجز الآن':p.type==='digital'?'اشتر الآن':'أضف للسلة سريعاً'}
-        </button>
-      </div>
-
-      {/* Info */}
-      <div style={{ padding:'12px 14px 14px' }}>
-        <div style={{ fontSize:10,color:'var(--ink3)',marginBottom:4,fontWeight:700,letterSpacing:'.06em',textTransform:'uppercase' }}>{p.category||'—'}</div>
-        <div style={{ fontSize:14,fontWeight:800,color:'var(--ink1)',marginBottom:8,lineHeight:1.4,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical' }}>{p.name}</div>
-
-        {/* Sizes preview */}
-        {p.sizes?.length > 0 && (
-          <div style={{ display:'flex',gap:4,flexWrap:'wrap',marginBottom:10 }}>
-            {p.sizes.slice(0,5).map((s:string) => (
-              <span key={s} style={{ fontSize:10,background:'var(--void2)',border:'1px solid var(--border)',borderRadius:6,padding:'2px 7px',color:'var(--ink2)',fontWeight:600 }}>{s}</span>
-            ))}
-            {p.sizes.length > 5 && <span style={{ fontSize:10,color:'var(--ink3)' }}>+{p.sizes.length-5}</span>}
-          </div>
-        )}
-
-        <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between' }}>
-          <div style={{ fontSize:19,fontWeight:900,color:'var(--ember)',letterSpacing:'-0.02em',lineHeight:1 }}>
-            {p.price.toLocaleString()} <span style={{ fontSize:11,fontWeight:600,opacity:.7 }}>{currency}</span>
-          </div>
-          <div style={{ display:'flex',alignItems:'center',gap:3,fontSize:11,color:'var(--gold)' }}>
-            <Star size={12} fill="var(--gold)" stroke="none" /> 4.9
-          </div>
-        </div>
-      </div>
-      <style>{`.quick-add-btn{opacity:0!important} *:hover>.quick-add-btn,.card-lift:hover .quick-add-btn{opacity:1!important}`}</style>
-    </div>
-  );
-}
-
-/* Product Detail Modal */
-function ProductModal({ p, cart, onClose, currency, userId }: { p:SProduct; cart:ReturnType<typeof useCart>; onClose:()=>void; currency:string; userId:string }) {
-  const [size,  setSize]  = useState(p.sizes?.[0]||'');
-  const [color, setColor] = useState(p.colors?.[0]||'');
-  const [qty,   setQty]   = useState(1);
-  const [added, setAdded] = useState(false);
-  const firstColorImg = p.colors?.[0] && p.colorImages?.[p.colors[0]];
-  const [activeImage, setActiveImage] = useState(firstColorImg || p.imageUrl || '');
-
-  const handleAdd = () => {
-    cart.add(p, size, color);
-    for (let i = 0; i < qty-1; i++) cart.add(p, size, color);
-    setAdded(true);
-    setTimeout(() => { setAdded(false); onClose(); }, 1000);
-  };
-
-  return (
-    <div onClick={onClose} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,.7)',backdropFilter:'blur(8px)',zIndex:300,display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0' }}
-      className="anim-fade-up">
-      <div onClick={e=>e.stopPropagation()} style={{
-        background:'var(--panel)',borderRadius:'24px 24px 0 0',width:'100%',maxWidth:520,
-        maxHeight:'90vh',overflowY:'auto',padding:'0 0 24px',
-      }}>
-        {/* Main image */}
-        <div style={{ height:260,position:'relative',background:activeImage?'#000':'var(--void2)',flexShrink:0 }}>
-          {activeImage
-            ? <img src={activeImage} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover',transition:'opacity .2s' }} />
-            : <div style={{ width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:80 }}>{p.emoji||'📦'}</div>
-          }
-          <button onClick={onClose} style={{ position:'absolute',top:14,left:14,width:34,height:34,borderRadius:'50%',background:'rgba(0,0,0,.5)',border:'none',color:'#fff',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>
-            <X size={17} />
-          </button>
-          {p.sales > 0 && <div style={{ position:'absolute',bottom:14,right:14,background:'var(--ember)',color:'#fff',fontSize:11,fontWeight:700,padding:'3px 10px',borderRadius:99 }}>{p.sales}+ مبيعة</div>}
-        </div>
-        {/* Image thumbnails — shown when product has multiple images */}
-        {(p.images?.length > 0) && (() => {
-          const allImgs = [p.imageUrl, ...(p.images||[])].filter((img,i,arr) => img && arr.indexOf(img)===i);
-          if (allImgs.length <= 1) return null;
-          return (
-            <div style={{ display:'flex',gap:6,overflowX:'auto',padding:'8px 14px',background:'var(--void2)',borderBottom:'1px solid var(--border)' }}>
-              {allImgs.map((img,i) => (
-                <button key={i} onClick={()=>setActiveImage(img)} style={{
-                  flexShrink:0,width:48,height:48,borderRadius:7,overflow:'hidden',
-                  border:`2px solid ${activeImage===img?'var(--ember)':'var(--border2)'}`,
-                  background:'var(--void3)',cursor:'pointer',padding:0,transition:'border-color .15s',
-                }}>
-                  <img src={img} alt="" style={{ width:'100%',height:'100%',objectFit:'cover' }} loading="lazy" />
-                </button>
-              ))}
-            </div>
-          );
-        })()}
-
-        <div style={{ padding:'20px 20px 0' }}>
-          <div style={{ fontSize:11,color:'var(--ink3)',marginBottom:4 }}>{p.category} {p.sku ? `· #${p.sku}` : ''}</div>
-          <h2 style={{ fontSize:20,fontWeight:900,color:'var(--ink1)',marginBottom:8 }}>{p.name}</h2>
-          {p.description && <p style={{ fontSize:13,color:'var(--ink2)',lineHeight:1.6,marginBottom:14 }}>{p.description}</p>}
-
-          {/* Custom Fields */}
-          {p.customFields && p.customFields.filter(f => f.value).length > 0 && (
-            <div style={{ display:'flex',flexDirection:'column',gap:6,marginBottom:14,padding:'12px 14px',background:'var(--void2)',borderRadius:10,border:'1px solid var(--border)' }}>
-              {p.customFields.filter(f => f.value).map(f => (
-                <div key={f.id} style={{ display:'flex',justifyContent:'space-between',alignItems:'center',gap:8 }}>
-                  <span style={{ fontSize:11,fontWeight:700,color:'var(--ink3)' }}>{f.label}</span>
-                  {f.type === 'boolean'
-                    ? <span style={{ fontSize:11,fontWeight:700,color:f.value==='true'?'var(--mint)':'var(--ember)' }}>{f.value==='true'?'✅ نعم':'❌ لا'}</span>
-                    : f.type === 'color'
-                      ? <span style={{ display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:700,color:'var(--ink2)' }}>
-                          <span style={{ width:14,height:14,borderRadius:'50%',background:f.value,border:'1px solid var(--border)',display:'inline-block',flexShrink:0 }}/>
-                          {f.value}
-                        </span>
-                      : <span style={{ fontSize:11,fontWeight:700,color:'var(--ink2)' }}>{f.value}</span>
-                  }
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Price */}
-          <div style={{ fontSize:28,fontWeight:900,color:'var(--ember)',letterSpacing:'-0.04em',marginBottom:18 }}>
-            {p.price.toLocaleString()} {currency}
-          </div>
-
-          {/* Service meta */}
-          {p.type === 'service' && (p.duration || p.workArea) && (
-            <div style={{ display:'flex',flexWrap:'wrap',gap:8,marginBottom:14 }}>
-              {p.duration && <span style={{ display:'flex',alignItems:'center',gap:5,fontSize:12,color:'var(--ink2)',background:'var(--void2)',border:'1px solid var(--border)',borderRadius:99,padding:'4px 12px' }}>⏱ {p.duration}</span>}
-              {p.workArea && <span style={{ display:'flex',alignItems:'center',gap:5,fontSize:12,color:'var(--ink2)',background:'var(--void2)',border:'1px solid var(--border)',borderRadius:99,padding:'4px 12px' }}>📍 {p.workArea}</span>}
-            </div>
-          )}
-          {/* Digital badge */}
-          {p.type === 'digital' && (
-            <div style={{ marginBottom:14,padding:'8px 14px',background:'rgba(14,165,233,.1)',border:'1px solid rgba(14,165,233,.3)',borderRadius:8,fontSize:12,color:'var(--ink2)' }}>
-              💻 منتج رقمي — سيُرسل إليك مباشرة بعد التأكيد
-            </div>
-          )}
-          {/* Sizes — products only */}
-          {(!p.type || p.type === 'product') && p.sizes?.length > 0 && (
-            <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:11,fontWeight:700,color:'var(--ink3)',marginBottom:8 }}>المقاس</div>
-              <div style={{ display:'flex',gap:8,flexWrap:'wrap' }}>
-                {p.sizes.map(s => (
-                  <button key={s} onClick={()=>setSize(s)} style={{
-                    padding:'6px 14px',borderRadius:8,border:`1.5px solid ${size===s?'var(--ember)':'var(--border2)'}`,
-                    background:size===s?'rgba(255,106,0,.12)':'transparent',
-                    color:size===s?'var(--ember2)':'var(--ink2)',
-                    fontSize:13,fontWeight:600,cursor:'pointer',transition:'all .15s',
-                  }}>{s}</button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Colors */}
-          {p.colors?.length > 0 && (
-            <div style={{ marginBottom:18 }}>
-              <div style={{ fontSize:11,fontWeight:700,color:'var(--ink3)',marginBottom:8 }}>اللون</div>
-              <div style={{ display:'flex',gap:8,flexWrap:'wrap' }}>
-                {p.colors.map(clr => {
-                  const colorImg = p.colorImages?.[clr];
-                  return (
-                    <button key={clr} onClick={()=>{
-                      setColor(clr);
-                      setActiveImage(colorImg || p.imageUrl || '');
-                    }} style={{
-                      padding: colorImg ? '4px' : '6px 14px',
-                      borderRadius: colorImg ? 10 : 8,
-                      border:`2px solid ${color===clr?'var(--ember)':'var(--border2)'}`,
-                      background:color===clr?'rgba(255,106,0,.12)':'transparent',
-                      cursor:'pointer',transition:'all .15s',
-                      display:'flex',flexDirection:'column',alignItems:'center',gap:4,
-                    }}>
-                      {colorImg ? (
-                        <>
-                          <img src={colorImg} alt={clr} style={{ width:56,height:56,objectFit:'cover',borderRadius:7 }} />
-                          <span style={{ fontSize:10,fontWeight:700,color:color===clr?'var(--ember2)':'var(--ink2)' }}>{clr}</span>
-                        </>
-                      ) : (
-                        <span style={{ fontSize:13,fontWeight:600,color:color===clr?'var(--ember2)':'var(--ink2)' }}>{clr}</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Related products */}
-          {p.category && (
-            <div style={{ marginBottom:18 }}>
-              <div style={{ fontSize:11,fontWeight:700,color:'var(--ink3)',marginBottom:10,letterSpacing:'.06em' }}>🛍️ قد يعجبك أيضاً</div>
-              <div style={{ display:'flex',gap:8,overflowX:'auto',paddingBottom:4 }}>
-                {(window as any).__sfProducts?.filter((rp:any) => rp.id !== p.id && rp.category === p.category).slice(0,4).map((rp:any) => (
-                  <div key={rp.id}
-                    onClick={()=>{ onClose(); setTimeout(()=>document.dispatchEvent(new CustomEvent('viewProduct',{detail:rp})),50); }}
-                    style={{ flexShrink:0,width:88,borderRadius:10,overflow:'hidden',cursor:'pointer',background:'var(--void2)',border:'1px solid var(--border)' }}>
-                    <div style={{ height:70,background:rp.imageUrl?'#000':'var(--void3)',overflow:'hidden' }}>
-                      {rp.imageUrl ? <img src={rp.imageUrl} alt={rp.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} loading="lazy"/> : <div style={{ width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:24 }}>{rp.emoji||'📦'}</div>}
-                    </div>
-                    <div style={{ padding:'5px 7px' }}>
-                      <div style={{ fontSize:10,fontWeight:700,color:'var(--ink1)',overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis' }}>{rp.name}</div>
-                      <div style={{ fontSize:11,fontWeight:900,color:'var(--ember)' }}>{rp.price.toLocaleString()} {currency}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Qty */}
-          <div style={{ display:'flex',alignItems:'center',gap:12,marginBottom:20 }}>
-            <div style={{ fontSize:11,fontWeight:700,color:'var(--ink3)' }}>الكمية</div>
-            <div style={{ display:'flex',alignItems:'center',gap:8,background:'var(--void2)',borderRadius:8,padding:'4px 8px' }}>
-              <button onClick={()=>setQty(q=>Math.max(1,q-1))} style={{ width:36,height:36,borderRadius:6,background:'var(--panel)',border:'1px solid var(--border)',cursor:'pointer',color:'var(--ink2)',display:'flex',alignItems:'center',justifyContent:'center' }}><Minus size={14}/></button>
-              <span style={{ fontSize:15,fontWeight:700,color:'var(--ink1)',minWidth:28,textAlign:'center' }}>{qty}</span>
-              <button onClick={()=>setQty(q=>Math.min(p.stock,q+1))} style={{ width:36,height:36,borderRadius:6,background:'var(--panel)',border:'1px solid var(--border)',cursor:'pointer',color:'var(--ink2)',display:'flex',alignItems:'center',justifyContent:'center' }}><Plus size={14}/></button>
-            </div>
-            <span style={{ fontSize:11,color:'var(--ink3)' }}>{p.stock} متوفرة</span>
-          </div>
-
-          <button onClick={handleAdd} style={{
-            width:'100%',height:50,background:added?'var(--mint)':'var(--ember)',
-            border:'none',borderRadius:'var(--r)',color:'#fff',fontSize:15,fontWeight:700,
-            cursor:'pointer',transition:'all .2s',
-            display:'flex',alignItems:'center',justifyContent:'center',gap:8,
-            boxShadow:`0 4px 16px ${added?'rgba(0,200,150,.3)':'rgba(255,106,0,.35)'}`,
-          }}>
-            {added
-              ? <><Check size={18}/> {p.type==='service'?'تم الحجز!':'تمت الإضافة!'}</>
-              : <><ShoppingCart size={16}/> {p.type==='service'?'احجز الآن':p.type==='digital'?'اشتر الآن':'أضف للسلة'} — {(p.price*qty).toLocaleString()} {currency}</>
-            }
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* Cart Sidebar */
-function CartSidebar({ cart, storeInfo, userId, onClose, onOrderSuccess }: { cart:ReturnType<typeof useCart>; storeInfo:StoreInfo; userId:string; onClose:()=>void; onOrderSuccess:(orderId:string)=>void }) {
-  const [step, setStep] = useState<'cart'|'checkout'|'success'>('cart');
-  const [form, setForm] = useState({ name:'', phone:'', city:'', address:'', notes:'', subscribe:true, paymentMethod:'cod' as 'cod'|'virement' });
-  const [couponCode, setCouponCode] = useState('');
-  const [couponDiscount, setCouponDiscount] = useState(0);
-  const [couponMsg, setCouponMsg] = useState('');
-  const [citySearch, setCitySearch] = useState('');
-  const [showCities, setShowCities] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [orderId, setOrderId] = useState('');
-  const [orderCode, setOrderCode] = useState('');
-  const cur = storeInfo.brand.currency || 'MAD';
-  const deliveryCost = getDeliveryCost(form.city, storeInfo.deliveryCosts);
-  const grandTotal   = Math.max(0, cart.total - couponDiscount) + deliveryCost;
-
-  const filteredCities = MOROCCAN_CITIES.filter(c => c.includes(citySearch) || citySearch === '');
-
-  const applyCoupon = async () => {
-    if (!couponCode.trim()) return;
-    try {
-      const r = await fetch(`/api/coupons/validate?code=${encodeURIComponent(couponCode)}&userId=${userId}&total=${cart.total}`);
-      if (r.ok) {
-        const d = await r.json();
-        setCouponDiscount(d.discount || 0);
-        setCouponMsg(d.discount > 0 ? `✅ خصم ${d.discount} ${cur} تم تطبيقه` : '❌ الكود غير صحيح');
-      } else {
-        setCouponDiscount(0);
-        setCouponMsg('❌ الكود غير صحيح أو منتهي الصلاحية');
-      }
-    } catch {
-      setCouponDiscount(0);
-      setCouponMsg('❌ تعذر التحقق من الكود');
-    }
-  };
-
-  const handleOrder = async () => {
-    if (!form.name || !form.phone || !form.city) {
-      alert('الاسم الكامل، الهاتف والمدينة مطلوبون'); return;
-    }
-    setLoading(true);
-    try {
-      const items = cart.items.map(i => ({
-        productId: i.product.id, productName: i.product.name,
-        price: i.product.price, quantity: i.quantity, size: i.size, color: i.color,
-      }));
-      const r = await fetch('/api/orders/public', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          userId, items, customerName: form.name, customerPhone: form.phone,
-          city: form.city, address: form.address, total: grandTotal,
-          source: 'Storefront', notes: `${form.notes}${form.subscribe?' · يريد عروض':''}`
-        }),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error);
-
-      setOrderId(data.order.id);
-      setOrderCode(data.order.customerCode || '');
-
-      // Open WhatsApp for confirmation
-      const phone = storeInfo.brand.phone?.replace(/\D/g,'');
-      const itemsText = cart.items.map(i=>`• ${i.product.name} (${i.size} ${i.color}) x${i.quantity} — ${i.product.price*i.quantity} ${cur}`).join('\n');
-      const customerCodeStr = data.order.customerCode ? `\n🔑 الكود: ${data.order.customerCode}` : '';
-      const msg = `مرحباً ${storeInfo.brand.name}! 👋\n\nأريد تأكيد طلبي:\n\n${itemsText}\n\n💰 المجموع: ${cart.total} ${cur}\n🚚 التوصيل: ${deliveryCost} ${cur}\n💵 الإجمالي: ${grandTotal} ${cur}\n\n👤 الاسم: ${form.name}\n📱 الهاتف: ${form.phone}\n📍 المدينة: ${form.city}\n🏠 العنوان: ${form.address||'—'}\n🔖 رقم الطلب: ${data.order.id}${customerCodeStr}`;
-      if (phone) setTimeout(() => window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank'), 500);
-
-      cart.clear();
-    try { localStorage.removeItem('sahar_cart'); } catch {}
-      setStep('success');
-      onOrderSuccess(data.order.id);
-    } catch (e: any) {
-      alert(`حدث خطأ: ${e.message}`);
-    }
-    setLoading(false);
-  };
-
-  return (
-    <div style={{ position:'fixed',inset:0,zIndex:400,display:'flex' }}>
-      <div onClick={onClose} style={{ flex:1,background:'rgba(0,0,0,.6)',backdropFilter:'blur(4px)' }} />
-      <div style={{ width:'min(400px,100vw)',background:'var(--panel)',borderRight:'1px solid var(--border)',display:'flex',flexDirection:'column',overflowY:'auto',animation:'slide-in .25s ease' }}>
-
-        {/* Header */}
-        <div style={{ padding:'16px 18px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:10 }}>
-          <button onClick={onClose} style={{ width:32,height:32,borderRadius:8,background:'var(--panel2)',border:'1px solid var(--border)',cursor:'pointer',color:'var(--ink2)',display:'flex',alignItems:'center',justifyContent:'center' }}><X size={16}/></button>
-          <div style={{ flex:1,fontSize:15,fontWeight:700,color:'var(--ink1)' }}>
-            {step==='cart'?`سلتك (${cart.count})`  :step==='checkout'?'تأكيد الطلب':'تم الطلب ✅'}
-          </div>
-          {step==='cart' && <span style={{ fontSize:13,fontWeight:700,color:'var(--ember)' }}>{cart.total.toLocaleString()} {cur}</span>}
-        </div>
-
-        {/* Step: Cart */}
-        {step === 'cart' && (
-          <div style={{ flex:1,overflow:'auto',padding:'12px' }}>
-            {cart.items.length === 0 ? (
-              <div style={{ textAlign:'center',padding:'60px 20px',color:'var(--ink3)' }}>
-                <ShoppingCart size={40} style={{ margin:'0 auto 12px',opacity:.3 }} />
-                <div style={{ fontSize:14 }}>سلتك فارغة</div>
-                <button onClick={onClose} style={{ marginTop:16,padding:'8px 20px',background:'var(--ember)',border:'none',borderRadius:8,color:'#fff',cursor:'pointer',fontWeight:700,fontSize:13 }}>تصفح المنتجات</button>
-              </div>
-            ) : (
-              <>
-                {cart.items.map((item,i) => (
-                  <div key={i} style={{ display:'flex',gap:12,padding:'12px 0',borderBottom:'1px solid var(--border)' }}>
-                    <div style={{ width:64,height:64,borderRadius:10,background:'var(--void2)',overflow:'hidden',flexShrink:0 }}>
-                      {item.product.imageUrl
-                        ? <img src={item.product.imageUrl} alt="" style={{ width:'100%',height:'100%',objectFit:'cover' }} />
-                        : <div style={{ width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28 }}>{item.product.emoji||'📦'}</div>
-                      }
-                    </div>
-                    <div style={{ flex:1,minWidth:0 }}>
-                      <div style={{ fontSize:13,fontWeight:600,color:'var(--ink1)' }}>{item.product.name}</div>
-                      <div style={{ fontSize:11,color:'var(--ink3)',marginTop:2 }}>{item.size && `مقاس: ${item.size}`} {item.color && `· لون: ${item.color}`}</div>
-                      <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:8 }}>
-                        <div style={{ display:'flex',alignItems:'center',gap:8,background:'var(--void2)',borderRadius:6,padding:'3px 8px' }}>
-                          <button onClick={()=>cart.update(item.product.id,item.size,item.color,item.quantity-1)} style={{ width:22,height:22,borderRadius:5,background:'var(--panel)',border:'1px solid var(--border)',cursor:'pointer',color:'var(--ink2)',display:'flex',alignItems:'center',justifyContent:'center' }}><Minus size={10}/></button>
-                          <span style={{ fontSize:13,fontWeight:700,color:'var(--ink1)',minWidth:20,textAlign:'center' }}>{item.quantity}</span>
-                          <button onClick={()=>cart.update(item.product.id,item.size,item.color,item.quantity+1)} style={{ width:22,height:22,borderRadius:5,background:'var(--panel)',border:'1px solid var(--border)',cursor:'pointer',color:'var(--ink2)',display:'flex',alignItems:'center',justifyContent:'center' }}><Plus size={10}/></button>
-                        </div>
-                        <span style={{ fontSize:14,fontWeight:700,color:'var(--ink1)' }}>{(item.product.price*item.quantity).toLocaleString()} {cur}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                <div style={{ padding:'14px 0',borderTop:'1px solid var(--border)',marginTop:12 }}>
-                  <div style={{ display:'flex',justifyContent:'space-between',fontSize:13,color:'var(--ink2)',marginBottom:8 }}>
-                    <span>المنتجات</span><span>{cart.total.toLocaleString()} {cur}</span>
-                  </div>
-                  <div style={{ display:'flex',justifyContent:'space-between',fontSize:13,color:'var(--ink2)',marginBottom:12 }}>
-                    <span>التوصيل</span><span style={{ color:'var(--ink3)' }}>يُحسب حسب المدينة</span>
-                  </div>
-                  <button onClick={()=>setStep('checkout')} style={{
-                    width:'100%',height:48,background:'var(--ember)',border:'none',
-                    borderRadius:'var(--r)',color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer',
-                    display:'flex',alignItems:'center',justifyContent:'center',gap:8,
-                    boxShadow:'0 4px 16px rgba(255,106,0,.35)',
-                  }}>
-                    متابعة الطلب <ArrowRight size={16}/>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Step: Checkout */}
-        {step === 'checkout' && (
-          <div style={{ flex:1,overflow:'auto',padding:'16px 18px' }}>
-            <div style={{ display:'flex',flexDirection:'column',gap:12 }}>
-              <input className="glass-input" placeholder="الاسم الكامل *" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} />
-              <input className="glass-input" placeholder="رقم الهاتف *" value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} dir="ltr" type="tel" />
-
-              {/* City with autocomplete */}
-              <div style={{ position:'relative' }}>
-                <input className="glass-input" placeholder="المدينة *"
-                  value={citySearch||form.city}
-                  onChange={e=>{setCitySearch(e.target.value);setShowCities(true);setForm(f=>({...f,city:e.target.value}))}}
-                  onFocus={()=>setShowCities(true)} onBlur={()=>setTimeout(()=>setShowCities(false),200)}
-                />
-                {showCities && filteredCities.length > 0 && (
-                  <div style={{ position:'absolute',top:'100%',right:0,left:0,background:'var(--panel2)',border:'1px solid var(--border)',borderRadius:8,maxHeight:180,overflowY:'auto',zIndex:10,marginTop:4 }}>
-                    {filteredCities.map(city=>(
-                      <div key={city} onClick={()=>{setForm(f=>({...f,city}));setCitySearch(city);setShowCities(false)}}
-                        style={{ padding:'8px 14px',fontSize:13,color:'var(--ink1)',cursor:'pointer',borderBottom:'1px solid var(--border)' }}
-                        onMouseOver={e=>(e.currentTarget.style.background='var(--panel3)')}
-                        onMouseOut={e=>(e.currentTarget.style.background='')}
-                      >{city}</div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <textarea className="glass-input" placeholder="العنوان بالتفصيل (الشارع، الحي...)" rows={2}
-                value={form.address} onChange={e=>setForm(f=>({...f,address:e.target.value}))}
-                style={{ resize:'none' }} />
-              <textarea className="glass-input" placeholder="ملاحظة للبائع (اختياري)" rows={2}
-                value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))}
-                style={{ resize:'none' }} />
-
-              {/* Payment method */}
-              <div>
-                <div style={{ fontSize:12,fontWeight:700,color:'var(--ink3)',marginBottom:8 }}>💳 طريقة الدفع</div>
-                <div style={{ display:'flex',gap:8 }}>
-                  {[['cod','💵 دفع عند الاستلام'],['virement','🏦 تحويل بنكي']].map(([v,l]) => (
-                    <button key={v} onClick={()=>setForm(f=>({...f,paymentMethod:v as any}))}
-                      style={{ flex:1,padding:'10px',borderRadius:10,border:`1.5px solid ${form.paymentMethod===v?'var(--ember)':'var(--border)'}`,background:form.paymentMethod===v?'rgba(255,106,0,.1)':'transparent',color:form.paymentMethod===v?'var(--ember2)':'var(--ink2)',fontSize:12,fontWeight:700,cursor:'pointer' }}>
-                      {l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Coupon code */}
-              <div>
-                <div style={{ fontSize:12,fontWeight:700,color:'var(--ink3)',marginBottom:8 }}>🏷️ كود الخصم (اختياري)</div>
-                <div style={{ display:'flex',gap:8 }}>
-                  <input className="glass-input" placeholder="أدخل كود الخصم" value={couponCode}
-                    onChange={e=>{setCouponCode(e.target.value.toUpperCase());setCouponMsg('');}}
-                    style={{ flex:1,textTransform:'uppercase' }} dir="ltr"/>
-                  <button onClick={applyCoupon} style={{ padding:'0 16px',borderRadius:10,background:'var(--void2)',border:'1px solid var(--border)',color:'var(--ink2)',fontSize:12,fontWeight:700,cursor:'pointer' }}>
-                    تطبيق
-                  </button>
-                </div>
-                {couponMsg && <div style={{ fontSize:11,marginTop:4,color:couponDiscount>0?'var(--mint)':'var(--ember)',fontWeight:700 }}>{couponMsg}</div>}
-              </div>
-
-              <label style={{ display:'flex',alignItems:'center',gap:10,cursor:'pointer',fontSize:13,color:'var(--ink2)' }}>
-                <input type="checkbox" checked={form.subscribe} onChange={e=>setForm(f=>({...f,subscribe:e.target.checked}))} style={{ accentColor:'var(--ember)',width:16,height:16 }}/>
-                أريد استقبال العروض والمنتجات الجديدة عبر واتساب
-              </label>
-
-              {/* Order summary — always visible in checkout */}
-              <div style={{ background:'var(--void2)',borderRadius:'var(--r)',padding:'14px 16px',border:'1px solid var(--border)' }}>
-                <div style={{ fontSize:12,fontWeight:700,color:'var(--ink3)',marginBottom:10,letterSpacing:'.06em' }}>ملخص الطلب</div>
-                {cart.items.map((item,i)=>(
-                  <div key={i} style={{ display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--ink2)',marginBottom:5,gap:8 }}>
-                    <span style={{ flex:1 }}>{item.product.name}{item.size?` (${item.size})`:''}  {item.color?`· ${item.color}`:''} ×{item.quantity}</span>
-                    <span style={{ flexShrink:0,fontWeight:700 }}>{(item.product.price*item.quantity).toLocaleString()} {cur}</span>
-                  </div>
-                ))}
-                <div style={{ paddingTop:8,borderTop:'1px solid var(--border)',marginTop:8,display:'flex',flexDirection:'column',gap:5 }}>
-                  <div style={{ display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--ink2)' }}>
-                    <span>المجموع الفرعي</span><span>{cart.total.toLocaleString()} {cur}</span>
-                  </div>
-                  {couponDiscount > 0 && (
-                    <div style={{ display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--mint)',fontWeight:700 }}>
-                      <span>🏷️ الخصم</span><span>-{couponDiscount.toLocaleString()} {cur}</span>
-                    </div>
-                  )}
-                  <div style={{ display:'flex',justifyContent:'space-between',fontSize:12,color:'var(--ink2)' }}>
-                    <span>🚚 التوصيل إلى {form.city||'—'}</span>
-                    <span>{form.city ? `${deliveryCost} ${cur}` : 'يُحسب بعد اختيار المدينة'}</span>
-                  </div>
-                  <div style={{ display:'flex',justifyContent:'space-between',fontSize:16,fontWeight:900,color:'var(--ink1)',paddingTop:8,marginTop:2,borderTop:'1px solid var(--border)' }}>
-                    <span>💰 الإجمالي</span>
-                    <span style={{ color:'var(--ember)' }}>{grandTotal.toLocaleString()} {cur}</span>
-                  </div>
-                </div>
-              </div>
-
-              <button onClick={handleOrder} disabled={loading} style={{
-                width:'100%',height:52,background:'var(--ember)',border:'none',
-                borderRadius:'var(--r)',color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer',
-                display:'flex',alignItems:'center',justifyContent:'center',gap:8,
-                boxShadow:'0 4px 16px rgba(255,106,0,.35)',opacity:loading?0.7:1,
-              }}>
-                {loading ? '⟳ جارٍ إرسال الطلب...' : <><MessageCircle size={16}/> تأكيد الطلب عبر واتساب</>}
-              </button>
-              <button onClick={()=>setStep('cart')} style={{ background:'none',border:'none',color:'var(--ink3)',cursor:'pointer',fontSize:13,padding:'4px' }}>← رجوع للسلة</button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: Success */}
-        {step === 'success' && (
-          <div style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'40px 24px',textAlign:'center' }}>
-            <div style={{ width:72,height:72,borderRadius:'50%',background:'rgba(0,200,150,.12)',border:'2px solid var(--mint)',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:20 }}>
-              <Check size={36} style={{ color:'var(--mint)' }} />
-            </div>
-            <h2 style={{ fontSize:22,fontWeight:900,color:'var(--ink1)',marginBottom:10 }}>تم إرسال طلبك! 🎉</h2>
-            <p style={{ fontSize:14,color:'var(--ink2)',lineHeight:1.7,marginBottom:24 }}>
-              تم إرسال تفاصيل طلبك عبر واتساب.<br/>
-              سيتواصل معك البائع لتأكيد الطلب قريباً.
-            </p>
-            {orderId && <div style={{ fontSize:12,color:'var(--ink3)',background:'var(--void2)',borderRadius:8,padding:'6px 14px',marginBottom:20 }}>رقم الطلب: {orderId}</div>}
-            <button onClick={onClose} style={{ padding:'10px 28px',background:'var(--ember)',border:'none',borderRadius:10,color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer' }}>
-              متابعة التسوق
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* Floating AI Chat */
-function FloatingChat({ userId, storeInfo }: { userId:string; storeInfo:StoreInfo }) {
-  const [open, setOpen] = useState(false);
-  const [msgs, setMsgs] = useState<ChatMsg[]>([{ role:'ai', content:`مرحباً! 👋 أنا مساعد ${storeInfo.brand.name||'المتجر'} الذكي.\nيمكنني مساعدتك في:\n• البحث عن منتج بالاسم أو الكود\n• الأسئلة عن التوصيل والمقاسات\n• تتبع طلبك\n\nكيف يمكنني مساعدتك؟` }]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [unread, setUnread] = useState(0);
-  const endRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => { if (open) { setUnread(0); endRef.current?.scrollIntoView(); } }, [msgs, open]);
-
-  const send = async (msg?: string) => {
-    const text = msg || input.trim();
-    if (!text) return;
-    setInput('');
-    const newMsg: ChatMsg = { role:'user', content:text };
-    setMsgs(m => [...m, newMsg]);
-    setLoading(true);
-    try {
-      const r = await fetch('/api/ai/public-reply', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ message: text, history: msgs.slice(-8).map(m=>({role:m.role,content:m.content})), userId }),
-      });
-      const data = await r.json();
-      const aiMsg: ChatMsg = { role:'ai', content: data.reply, product: data.product };
-      setMsgs(m => [...m, aiMsg]);
-      if (!open) setUnread(n => n+1);
-    } catch { setMsgs(m => [...m, { role:'ai', content:'عذراً، حدث خطأ في الاتصال. حاول مرة أخرى.' }]); }
-    setLoading(false);
-  };
-
-  return (
-    <>
-      {/* FAB */}
-      <button onClick={()=>setOpen(v=>!v)} style={{
-        position:'fixed',bottom:24,left:24,width:56,height:56,borderRadius:'50%',
-        background:'var(--ember)',border:'none',color:'#fff',cursor:'pointer',zIndex:200,
-        display:'flex',alignItems:'center',justifyContent:'center',
-        boxShadow:'0 4px 20px rgba(255,106,0,.45)',transition:'all .2s',
-      }}>
-        {open ? <X size={22}/> : <Bot size={22}/>}
-        {unread > 0 && !open && (
-          <div style={{ position:'absolute',top:-4,right:-4,width:18,height:18,background:'var(--mint)',borderRadius:'50%',fontSize:9,fontWeight:900,display:'flex',alignItems:'center',justifyContent:'center',border:'2px solid var(--void)' }}>{unread}</div>
-        )}
-      </button>
-
-      {/* Chat panel */}
-      {open && (
-        <div style={{
-          position:'fixed',bottom:92,left:16,right:16,maxWidth:360,marginLeft:'auto',
-          background:'var(--panel)',border:'1px solid var(--border2)',borderRadius:'var(--r-xl)',
-          boxShadow:'0 16px 48px rgba(0,0,0,.5)',zIndex:200,overflow:'hidden',
-          animation:'fade-up .2s ease',
-          display:'flex',flexDirection:'column',maxHeight:460,
-        }}>
-          {/* Header */}
-          <div style={{ padding:'12px 16px',background:'var(--ember)',display:'flex',alignItems:'center',gap:10 }}>
-            <div style={{ width:32,height:32,borderRadius:'50%',background:'rgba(255,255,255,.2)',display:'flex',alignItems:'center',justifyContent:'center' }}><Bot size={16} style={{ color:'#fff' }}/></div>
-            <div>
-              <div style={{ fontSize:13,fontWeight:700,color:'#fff' }}>مساعد {storeInfo.brand.name}</div>
-              <div style={{ fontSize:10,color:'rgba(255,255,255,.7)' }}>متاح الآن · يرد بالدارجة</div>
-            </div>
-          </div>
-
-          {/* Messages */}
-          <div style={{ flex:1,overflow:'auto',padding:'12px',display:'flex',flexDirection:'column',gap:10 }}>
-            {msgs.map((m,i) => (
-              <div key={i} style={{ maxWidth:'85%', alignSelf:m.role==='user'?'flex-end':'flex-start' }}>
-                <div className={m.role==='ai'?'bubble-ai':'bubble-out'}
-                  style={{ whiteSpace:'pre-wrap', fontSize:12 }}>
-                  {m.content}
-                </div>
-              </div>
-            ))}
-            {loading && (
-              <div className="bubble-ai" style={{ fontSize:12,color:'var(--ink3)',alignSelf:'flex-start' }}>
-                <span style={{ animation:'blink 1s infinite' }}>يكتب...</span>
-              </div>
-            )}
-            <div ref={endRef} />
-          </div>
-
-          {/* Quick replies */}
-          <div style={{ padding:'8px 10px',display:'flex',gap:6,flexWrap:'wrap',borderTop:'1px solid var(--border)' }}>
-            {['اشوف المنتجات','بكام التوصيل؟','تتبع طلبي'].map(q=>(
-              <button key={q} onClick={()=>send(q)} style={{ fontSize:10,padding:'4px 9px',borderRadius:99,background:'var(--panel2)',border:'1px solid var(--border2)',color:'var(--ink2)',cursor:'pointer' }}>{q}</button>
-            ))}
-          </div>
-
-          {/* Input */}
-          <div style={{ padding:'8px 10px',borderTop:'1px solid var(--border)',display:'flex',gap:8 }}>
-            <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&send()}
-              placeholder="اكتب سؤالك..." className="glass-input"
-              style={{ flex:1,padding:'7px 12px',fontSize:12 }} />
-            <button onClick={()=>send()} disabled={!input.trim()||loading}
-              style={{ width:34,height:34,borderRadius:'50%',background:'var(--ember)',border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',opacity:(!input.trim()||loading)?0.5:1 }}>
-              <Send size={14} style={{ color:'#fff' }}/>
-            </button>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-/* Order Tracking */
-function TrackingModal({ userId, storeInfo, onClose }: { userId:string; storeInfo:StoreInfo; onClose:()=>void }) {
-  const [query, setQuery] = useState('');
-  const [mode, setMode] = useState<'phone'|'code'>('code');
-  const [orders, setOrders] = useState<any[]>([]);
-  const [singleOrder, setSingleOrder] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
-  const cur = storeInfo.brand.currency || 'MAD';
-
-  const STATUS_AR: Record<string,string> = { pending:'⏳ بانتظار التأكيد', approved:'✅ تم التأكيد', processing:'⚙️ جارٍ التحضير', shipped:'🚚 في الطريق', delivered:'📦 وصل', cancelled:'❌ ملغي' };
-  const STATUS_COLOR: Record<string,string> = { pending:'var(--gold)', approved:'var(--mint)', processing:'var(--gold)', shipped:'var(--mint)', delivered:'var(--mint)', cancelled:'var(--ember)' };
-
-  const search = async () => {
-    if (!query.trim()) return;
-    setLoading(true);
-    setSingleOrder(null);
-    setOrders([]);
-    try {
-      if (mode === 'code') {
-        // Track by customer code
-        const r = await fetch(`/api/orders/track-code/${encodeURIComponent(query.trim().toUpperCase())}?userId=${userId}`);
-        const data = await r.json();
-        if (r.ok) setSingleOrder(data);
-        else setOrders([]);
-      } else {
-        // Track by phone
-        const r = await fetch(`/api/orders/track/${encodeURIComponent(query.trim())}?userId=${userId}`);
-        const data = await r.json();
-        setOrders(Array.isArray(data) ? data : []);
-      }
-    } catch {}
-    setSearched(true);
-    setLoading(false);
-  };
-
-  return (
-    <div onClick={onClose} style={{ position:'fixed',inset:0,background:'rgba(0,0,0,.7)',backdropFilter:'blur(6px)',zIndex:300,display:'flex',alignItems:'center',justifyContent:'center',padding:16 }}>
-      <div onClick={e=>e.stopPropagation()} style={{ background:'var(--panel)',borderRadius:'var(--r-xl)',width:'100%',maxWidth:440,padding:24 }}>
-        <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20 }}>
-          <h2 style={{ fontSize:18,fontWeight:900,color:'var(--ink1)' }}>📦 تتبع طلبك</h2>
-          <button onClick={onClose} style={{ width:30,height:30,borderRadius:8,background:'var(--panel2)',border:'1px solid var(--border)',cursor:'pointer',color:'var(--ink2)',display:'flex',alignItems:'center',justifyContent:'center' }}><X size={14}/></button>
-        </div>
-        {/* Mode toggle */}
-        <div style={{ display:'flex',gap:6,marginBottom:12 }}>
-          {[['code','🔑 كود التتبع'],['phone','📱 رقم الهاتف']].map(([m,l])=>(
-            <button key={m} onClick={()=>{setMode(m as 'code'|'phone');setQuery('');setSearched(false);setSingleOrder(null);setOrders([])}}
-              style={{ flex:1,padding:'7px',borderRadius:8,border:`1.5px solid ${mode===m?'var(--ember)':'var(--border)'}`,background:mode===m?'rgba(255,106,0,.1)':'var(--void2)',color:mode===m?'var(--ember2)':'var(--ink3)',fontSize:12,fontWeight:700,cursor:'pointer' }}>
-              {l}
-            </button>
-          ))}
-        </div>
-        <div style={{ display:'flex',gap:8,marginBottom:16 }}>
-          <input className="glass-input"
-            placeholder={mode==='code'?'أدخل كودك مثل: AB12CD':'أدخل رقم هاتفك'}
-            value={query} onChange={e=>setQuery(e.target.value)}
-            onKeyDown={e=>e.key==='Enter'&&search()}
-            dir={mode==='code'?'ltr':'ltr'}
-            style={{ flex:1,textTransform:mode==='code'?'uppercase':'none' }} />
-          <button onClick={search} disabled={loading} style={{ padding:'8px 18px',background:'var(--ember)',border:'none',borderRadius:10,color:'#fff',fontWeight:700,cursor:'pointer',fontSize:14 }}>
-            {loading?'⟳':'بحث'}
-          </button>
-        </div>
-        {searched && !singleOrder && orders.length === 0 && (
-          <p style={{ color:'var(--ink3)',textAlign:'center',fontSize:13,padding:'12px 0' }}>
-            {mode==='code'?'لم نجد طلباً بهذا الكود':'لم نجد طلبات بهذا الرقم'}
-          </p>
-        )}
-        {/* Single order by code */}
-        {singleOrder && (
-          <div style={{ background:'rgba(0,200,150,.06)',border:'2px solid rgba(0,200,150,.25)',borderRadius:14,padding:'16px' }}>
-            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10 }}>
-              <span style={{ fontSize:14,fontWeight:900,color:'var(--ink1)' }}>طلبك</span>
-              <span style={{ fontSize:13,fontWeight:800,color:STATUS_COLOR[singleOrder.status]||'var(--ink2)' }}>{STATUS_AR[singleOrder.status]||singleOrder.status}</span>
-            </div>
-            {(singleOrder.items||[]).map((item:any,i:number)=>(
-              <div key={i} style={{ fontSize:13,color:'var(--ink2)',marginBottom:4 }}>• {item.productName} × {item.quantity}</div>
-            ))}
-            <div style={{ display:'flex',justifyContent:'space-between',marginTop:10,paddingTop:8,borderTop:'1px solid var(--border)' }}>
-              <span style={{ fontSize:11,color:'var(--ink3)' }}>{singleOrder.city}</span>
-              <span style={{ fontSize:14,fontWeight:700,color:'var(--ember)' }}>{singleOrder.total} {cur}</span>
-            </div>
-            {singleOrder.trackingNumber && <div style={{ marginTop:6,fontSize:12,color:'var(--mint)',fontWeight:700 }}>🚚 رقم التتبع: {singleOrder.trackingNumber}</div>}
-          </div>
-        )}
-        {orders.map(o=>(
-          <div key={o.id} style={{ background:'var(--void2)',borderRadius:'var(--r)',padding:'14px 16px',marginBottom:10,border:'1px solid var(--border)' }}>
-            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8 }}>
-              <span style={{ fontSize:11,color:'var(--ink3)',fontFamily:'var(--font-mono)' }}>{o.id}</span>
-              <span style={{ fontSize:12,fontWeight:700,color:STATUS_COLOR[o.status]||'var(--ink2)' }}>{STATUS_AR[o.status]||o.status}</span>
-            </div>
-            {(o.items||[]).map((item:any,i:number)=>(
-              <div key={i} style={{ fontSize:12,color:'var(--ink2)',marginBottom:3 }}>• {item.productName} x{item.quantity}</div>
-            ))}
-            <div style={{ display:'flex',justifyContent:'space-between',marginTop:8,fontSize:12 }}>
-              <span style={{ color:'var(--ink3)' }}>{new Date(o.createdAt).toLocaleDateString('ar-MA')}</span>
-              <span style={{ fontWeight:700,color:'var(--ink1)' }}>{o.total} {cur}</span>
-            </div>
-            {o.trackingNumber && <div style={{ marginTop:6,fontSize:11,color:'var(--mint)' }}>🚚 رقم التتبع: {o.trackingNumber}</div>}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════
-// MAIN STOREFRONT
-// ══════════════════════════════════════════════
-export default function Storefront() {
-  // Get userId from URL or window
-  const userId = (() => {
-    // From URL path: /store/USER_ID
-    const path = window.location.pathname;
-    const match = path.match(/\/store\/([^\/\?]+)/);
-    if (match) return match[1];
-    // From query string: ?userId=XXX or ?user=XXX
-    const params = new URLSearchParams(window.location.search);
-    const qId = params.get('userId') || params.get('user') || params.get('id');
-    if (qId) return qId;
-    // From hash: #USER_ID
-    const hash = window.location.hash.replace('#', '');
-    if (hash && hash.length > 5) return hash;
-    return '';
-  })();
-
-  const { products, storeInfo, loading, error } = useStorefront(userId);
-  // Expose products globally for related products in modal
-  useEffect(() => { (window as any).__sfProducts = products; }, [products]);
-  const cart = useCart();
-
-  const [lang, setLang]          = useState<'ar'|'fr'>('ar');
-  const t = (ar: string, fr: string) => lang === 'ar' ? ar : fr;
-  const [search,     setSearch]     = useState('');
-  const [activeTab,  setActiveTab]  = useState('all');
-  const [sortBy,     setSortBy]     = useState<'popular'|'newest'|'price-asc'|'price-desc'>('popular');
-  const [viewProduct,setViewProduct]= useState<SProduct|null>(null);
-  const [viewMode, setViewMode]    = useState<'grid'|'list'>('grid');
-  const [priceMax, setPriceMax]    = useState(0); // 0 = no filter
-  const [showFilters,setShowFilters]=useState(false);
-  const [showCart,   setShowCart]   = useState(false);
-  const [showTrack,  setShowTrack]  = useState(false);
-  const [cartAnim,   setCartAnim]   = useState(false);
-  const [successOrderId,setSuccessOrderId] = useState('');
-
-  const handleAddToCart = (p: SProduct, size?: string, color?: string) => {
-    cart.add(p, size||p.sizes?.[0]||'', color||p.colors?.[0]||'');
-    setCartAnim(true);
-    setTimeout(() => setCartAnim(false), 600);
-  };
-
-  const categories = ['all', ...Array.from(new Set(products.map(p=>p.category).filter(Boolean)))];
-
-  let filtered = products
-    .filter(p => (activeTab==='all' || p.category===activeTab)
-      && (!search || p.name.includes(search) || p.description?.includes(search) || p.sku?.includes(search) || (p.colors||[]).some(cl=>cl.includes(search)))
-      && (priceMax === 0 || p.price <= priceMax));
-
-  if (sortBy === 'popular')    filtered = [...filtered].sort((a,b) => b.sales - a.sales);
-  if (sortBy === 'newest')     filtered = [...filtered].sort((a,b) => new Date(b.createdAt||0).getTime() - new Date(a.createdAt||0).getTime());
-  if (sortBy === 'price-asc')  filtered = [...filtered].sort((a,b) => a.price - b.price);
-  if (sortBy === 'price-desc') filtered = [...filtered].sort((a,b) => b.price - a.price);
-
-  if (loading) return (
-    <div style={{ minHeight:'100dvh',background:'var(--void)',display:'flex',alignItems:'center',justifyContent:'center' }}>
-      <div style={{ textAlign:'center',color:'var(--ink2)' }}>
-        <div style={{ width:48,height:48,border:'3px solid var(--border)',borderTopColor:'var(--ember)',borderRadius:'50%',animation:'spin 1s linear infinite',margin:'0 auto 16px' }}/>
-        جارٍ تحميل المتجر...
-      </div>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-    </div>
-  );
-
-  if (!userId) return (
-    <div dir="rtl" style={{ minHeight:'100dvh',background:'var(--void)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--ink2)',textAlign:'center',padding:24,flexDirection:'column',gap:20 }}>
-      <div style={{ fontSize:56 }}>🏪</div>
-      <div style={{ fontSize:22,fontWeight:900,color:'var(--ink1)' }}>متجر Sahar Shop</div>
-      <div style={{ fontSize:14,color:'var(--ink3)',maxWidth:360,lineHeight:1.8 }}>
-        مرحباً! للدخول لصفحة المتجر، اطلب من التاجر مشاركة رابط متجره الخاص معك عبر واتساب أو إنستغرام.
-      </div>
-      <div style={{ display:'flex',gap:12,flexWrap:'wrap',justifyContent:'center' }}>
-        <a href="/" style={{ padding:'10px 24px',background:'var(--ember)',borderRadius:10,color:'#fff',fontWeight:700,fontSize:14,textDecoration:'none' }}>
-          الصفحة الرئيسية
-        </a>
-        <a href="/login" style={{ padding:'10px 24px',background:'var(--panel)',border:'1px solid var(--border)',borderRadius:10,color:'var(--ink2)',fontWeight:700,fontSize:14,textDecoration:'none' }}>
-          دخول التاجر
-        </a>
-      </div>
-    </div>
-  );
-
-  if (error || (!loading && !storeInfo)) return (
-    <div style={{ minHeight:'100dvh',background:'var(--void)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--ink2)',textAlign:'center',padding:24 }}>
-      <div><div style={{ fontSize:40,marginBottom:16 }}>🏪</div><div style={{ fontSize:18,fontWeight:700,color:'var(--ink1)',marginBottom:8 }}>المتجر غير موجود</div><div style={{ fontSize:14 }}>{error||'تحقق من الرابط'}</div></div>
-    </div>
-  );
-
-  const brand = storeInfo!.brand;
-  const cur   = brand.currency || 'MAD';
-
-  return (
-    <div dir="rtl" style={{ minHeight:'100dvh',background:'var(--void)',color:'var(--ink1)',fontFamily:'Tajawal,system-ui,sans-serif' }}>
-      <style>{`
-        @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        body{background:var(--void)!important}
-        .product-hover:hover{transform:translateY(-3px)!important;border-color:var(--border2)!important}
-      `}</style>
-
-      {/* ── HEADER ───────────────────────────── */}
-      <header style={{
-        position:'sticky',top:0,zIndex:100,
-        background:'rgba(7,8,13,.92)',backdropFilter:'blur(20px)',
-        borderBottom:'1px solid var(--border)',
-        padding:'0 16px',height:60,
-        display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,
-      }}>
-        <div style={{ display:'flex',alignItems:'center',gap:10 }}>
-          <div style={{ width:38,height:38,borderRadius:10,overflow:'hidden',background:'#07080D',border:'1px solid rgba(255,255,255,.1)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,boxShadow:'0 2px 8px rgba(255,106,0,.2)' }}>
-            {brand.logo
-              ? <img src={brand.logo} alt="logo" style={{ width:'100%',height:'100%',objectFit:'contain' }}/>
-              : <img src="/sahar-logo-text.png" alt="S" style={{ width:'100%',height:'100%',objectFit:'contain' }}
-                  onError={e => { (e.currentTarget as HTMLImageElement).style.display='none'; (e.currentTarget.parentElement as HTMLElement).innerHTML='<span style="font-size:16px;font-weight:900;color:#FF6A00">' + (brand.name?.[0]?.toUpperCase()||'S') + '</span>'; }}
-                />
-            }
+    <header
+      className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-6"
+      style={{ pointerEvents: 'none' }}
+    >
+      <div
+        className="glass-nav mx-auto flex max-w-7xl items-center justify-between gap-3 rounded-[1.35rem] px-4 py-3 sm:px-5"
+        style={{ pointerEvents: 'auto' }}
+      >
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="flex items-center gap-3 text-right"
+          aria-label="العودة إلى أعلى الصفحة"
+        >
+          <div className="brand-mark">
+            <Sparkles size={18} />
           </div>
           <div>
-            <div style={{ fontSize:14,fontWeight:900,color:'var(--ink1)' }}>{brand.name}</div>
-            {brand.description && <div style={{ fontSize:10,color:'var(--ink3)',marginTop:1 }}>{brand.description}</div>}
+            <p className="text-[11px] tracking-[0.28em] text-white/45 uppercase">
+              VOID AI COMMERCE
+            </p>
+            <h1 className="text-sm font-semibold tracking-[0.08em] text-white sm:text-base">
+              SAHAR SHOP
+            </h1>
+          </div>
+        </button>
+
+        <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
+          <div className="nav-search max-w-xl flex-1">
+            <Search size={16} className="text-white/40" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="ابحث عن منتج أو خدمة أو مدينة..."
+              aria-label="بحث سريع"
+            />
           </div>
         </div>
-        <div style={{ display:'flex',gap:8,alignItems:'center' }}>
-          <button onClick={()=>setShowTrack(true)} style={{ padding:'5px 10px',borderRadius:8,background:'var(--panel)',border:'1px solid var(--border)',color:'var(--ink2)',fontSize:12,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',gap:5 }}>
-            <Package size={13}/> طلباتي
+
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={onMenu}
+            className="lg:hidden flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white"
+            aria-label="القائمة"
+          >
+            <Menu size={18} />
           </button>
-          {brand.phone && (
-            <a href={`https://wa.me/${brand.phone.replace(/\D/g,'')}`} target="_blank" rel="noreferrer"
-              style={{ padding:'5px 10px',borderRadius:8,background:'rgba(37,211,102,.12)',border:'1px solid rgba(37,211,102,.25)',color:'#25D366',fontSize:12,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:5,textDecoration:'none' }}>
-              <MessageCircle size={13}/> واتساب
-            </a>
-          )}
-          <button onClick={()=>setShowCart(true)} style={{
-            position:'relative',width:40,height:40,borderRadius:10,
-            background:cartAnim?'var(--ember)':'var(--panel)',border:'1px solid var(--border)',
-            color:cartAnim?'#fff':'var(--ink2)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',
-            transition:'all .2s',
-          }}>
-            <ShoppingCart size={18}/>
-            {cart.count > 0 && (
-              <span style={{ position:'absolute',top:-5,left:-5,width:18,height:18,background:'var(--ember)',borderRadius:'50%',fontSize:9,fontWeight:900,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',border:'2px solid var(--void)' }}>{cart.count}</span>
+          <button
+            type="button"
+            onClick={onOpenCart}
+            className="cart-button"
+            aria-label="سلة المشتريات"
+          >
+            <ShoppingCart size={18} />
+            {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   4. MOBILE MENU — Glass side sheet
+   ═══════════════════════════════════════════════════ */
+
+function MobileMenu({
+  open,
+  onClose,
+  onNavigate,
+  activeTab,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onNavigate: (section: string, tab?: 'products' | 'services') => void;
+  activeTab: 'products' | 'services';
+}) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] lg:hidden">
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+        style={{ animation: 'fadeIn 200ms ease' }}
+      />
+      <div
+        className="absolute right-0 top-0 bottom-0 w-[82%] max-w-sm bg-[var(--panel)] border-l border-[var(--border2)] p-5 overflow-y-auto"
+        style={{
+          animation: 'slideLeft 320ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+          boxShadow: 'var(--depth-shadow)',
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="brand-mark">
+              <Sparkles size={16} />
+            </div>
+            <span className="text-sm font-semibold text-white">SAHAR SHOP</span>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white"
+            aria-label="إغلاق"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="mt-6 space-y-2">
+          <button
+            type="button"
+            onClick={() => onNavigate('products', 'products')}
+            className={cn(
+              'w-full flex items-center gap-3 rounded-[1.1rem] border px-4 py-3 text-right transition',
+              activeTab === 'products'
+                ? 'border-[var(--border-ember)] bg-[var(--ember-soft)] text-[var(--ember2)]'
+                : 'border-[var(--border)] bg-white/[0.03] text-white/75 hover:bg-white/[0.06]'
             )}
+          >
+            <Package size={18} />
+            <span className="text-sm font-semibold">المنتجات</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('services', 'services')}
+            className={cn(
+              'w-full flex items-center gap-3 rounded-[1.1rem] border px-4 py-3 text-right transition',
+              activeTab === 'services'
+                ? 'border-[var(--border-ember)] bg-[var(--ember-soft)] text-[var(--ember2)]'
+                : 'border-[var(--border)] bg-white/[0.03] text-white/75 hover:bg-white/[0.06]'
+            )}
+          >
+            <Briefcase size={18} />
+            <span className="text-sm font-semibold">الخدمات</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('offers')}
+            className="w-full flex items-center gap-3 rounded-[1.1rem] border border-[var(--border)] bg-white/[0.03] px-4 py-3 text-right text-white/75 transition hover:bg-white/[0.06]"
+          >
+            <Tag size={18} />
+            <span className="text-sm font-semibold">العروض</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('trust')}
+            className="w-full flex items-center gap-3 rounded-[1.1rem] border border-[var(--border)] bg-white/[0.03] px-4 py-3 text-right text-white/75 transition hover:bg-white/[0.06]"
+          >
+            <Shield size={18} />
+            <span className="text-sm font-semibold">عناصر الثقة</span>
           </button>
         </div>
-      </header>
 
-      {/* ── HERO ─────────────────────────────── */}
-      <div style={{ textAlign:'center',padding:'32px 20px 20px',position:'relative',overflow:'hidden' }}>
-        <div style={{ position:'absolute',inset:0,background:'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,106,0,.06) 0%, transparent 70%)',pointerEvents:'none' }}/>
-        <h1 style={{ fontSize:'clamp(22px,5vw,38px)',fontWeight:900,color:'var(--ink1)',letterSpacing:'-0.03em',marginBottom:8,lineHeight:1.2 }}>
-          {brand.name}
-        </h1>
-        <p style={{ fontSize:14,color:'var(--ink2)',marginBottom:20 }}>
-          {filtered.length} منتج متوفر · توصيل لجميع مدن المغرب 🇲🇦
-        </p>
-        {/* Social links */}
-        <div style={{ display:'flex',justifyContent:'center',gap:10,flexWrap:'wrap' }}>
-          {brand.phone && <a href={`https://wa.me/${brand.phone.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" style={{ padding:'5px 12px',borderRadius:99,background:'rgba(37,211,102,.1)',border:'1px solid rgba(37,211,102,.2)',color:'#25D366',fontSize:12,fontWeight:700,textDecoration:'none',display:'flex',alignItems:'center',gap:5 }}><MessageCircle size={12}/>واتساب</a>}
-          {brand.instagram && <a href={`https://instagram.com/${brand.instagram}`} target="_blank" rel="noreferrer" style={{ padding:'5px 12px',borderRadius:99,background:'rgba(225,48,108,.1)',border:'1px solid rgba(225,48,108,.2)',color:'#E1306C',fontSize:12,fontWeight:700,textDecoration:'none' }}>📸 Instagram</a>}
-          {brand.facebook && <a href={`https://facebook.com/${brand.facebook}`} target="_blank" rel="noreferrer" style={{ padding:'5px 12px',borderRadius:99,background:'rgba(24,119,242,.1)',border:'1px solid rgba(24,119,242,.2)',color:'#1877F2',fontSize:12,fontWeight:700,textDecoration:'none' }}>📘 Facebook</a>}
-          <button onClick={()=>{navigator.share?.({ title:brand.name, url:window.location.href }).catch(()=>{})||navigator.clipboard?.writeText(window.location.href)}} style={{ padding:'5px 12px',borderRadius:99,background:'var(--panel)',border:'1px solid var(--border)',color:'var(--ink2)',fontSize:12,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:5 }}>
-            <Share2 size={12}/> مشاركة
-          </button>
+        <div className="mt-8 rounded-[1.3rem] border border-[var(--border)] bg-white/[0.03] p-4 text-right">
+          <p className="text-[11px] uppercase tracking-[0.28em] text-white/45">AI Commerce OS</p>
+          <p className="mt-2 text-sm text-white/70">
+            نظام بيع ذكي — مصنوع للسوق المغربي 🇲🇦
+          </p>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* ── SEARCH + FILTER ──────────────────── */}
-      <div style={{ padding:'0 16px',marginBottom:16 }}>
-        <div style={{ position:'relative',marginBottom:12 }}>
-          <Search size={16} style={{ position:'absolute',right:14,top:'50%',transform:'translateY(-50%)',color:'var(--ink3)',pointerEvents:'none' }}/>
-          <input className="glass-input" style={{ paddingRight:42 }}
-            placeholder="ابحث بالاسم أو الكود..."
-            value={search} onChange={e=>setSearch(e.target.value)} />
-        </div>
-        {/* Trust badges */}
-        <div style={{ padding:'10px 16px',display:'flex',gap:10,overflowX:'auto',borderBottom:'1px solid var(--border)' }}>
-          {[
-            { icon:'🚚', text:'توصيل سريع 24-48h' },
-            { icon:'💵', text:'دفع عند الاستلام' },
-            { icon:'🔄', text:'إرجاع خلال 7 أيام' },
-            { icon:'🔒', text:'دفع آمن 100%' },
-            { icon:'⭐', text:'جودة مضمونة' },
-          ].map(b => (
-            <div key={b.text} style={{ display:'flex',alignItems:'center',gap:5,whiteSpace:'nowrap',fontSize:11,color:'var(--ink3)',fontWeight:600,padding:'5px 10px',borderRadius:99,background:'var(--void2)',border:'1px solid var(--border)',flexShrink:0 }}>
-              <span>{b.icon}</span><span>{b.text}</span>
-            </div>
-          ))}
-        </div>
+/* ═══════════════════════════════════════════════════
+   5. CART DRAWER — Glass side sheet
+   ═══════════════════════════════════════════════════ */
 
-        {/* Category tabs */}
-        <div style={{ display:'flex',gap:8,overflowX:'auto',paddingBottom:4 }}>
-          {categories.map(cat=>(
-            <button key={cat} onClick={()=>setActiveTab(cat)} style={{
-              flexShrink:0,padding:'6px 14px',borderRadius:99,fontSize:12,fontWeight:600,cursor:'pointer',
-              border:`1px solid ${activeTab===cat?'var(--ember)':'var(--border)'}`,
-              background:activeTab===cat?'rgba(255,106,0,.12)':'var(--panel)',
-              color:activeTab===cat?'var(--ember2)':'var(--ink2)',transition:'all .15s',
-            }}>{cat==='all'?'الكل':cat}</button>
-          ))}
-        </div>
-      </div>
+function CartDrawer({
+  open,
+  onClose,
+  items,
+  onRemove,
+}: {
+  open: boolean;
+  onClose: () => void;
+  items: Product[];
+  onRemove: (id: number) => void;
+}) {
+  if (!open) return null;
 
-      {/* ── SORT ─────────────────────────────── */}
-      <div style={{ padding:'0 16px',marginBottom:16,display:'flex',alignItems:'center',justifyContent:'space-between' }}>
-        <span style={{ fontSize:12,color:'var(--ink3)',fontWeight:600 }}>{filtered.length} منتج</span>
-        {/* View mode toggle */}
-        <div style={{ display:'flex',gap:3,background:'var(--void2)',border:'1px solid var(--border)',borderRadius:8,padding:3 }}>
-          <button onClick={()=>setViewMode('grid')} style={{ width:28,height:26,borderRadius:6,border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',background:viewMode==='grid'?'var(--panel)':'transparent',color:viewMode==='grid'?'var(--ember)':'var(--ink3)',fontSize:14 }}>⊞</button>
-          <button onClick={()=>setViewMode('list')} style={{ width:28,height:26,borderRadius:6,border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',background:viewMode==='list'?'var(--panel)':'transparent',color:viewMode==='list'?'var(--ember)':'var(--ink3)',fontSize:14 }}>≡</button>
-        </div>
-        <select value={sortBy} onChange={e=>setSortBy(e.target.value as typeof sortBy)}
-          style={{ background:'var(--panel)',border:'1px solid var(--border)',borderRadius:8,padding:'5px 10px',color:'var(--ink2)',fontSize:12,cursor:'pointer',outline:'none' }}>
-          <option value="popular">الأكثر طلباً</option>
-          <option value="newest">الأحدث</option>
-          <option value="price-asc">السعر: من الأقل</option>
-          <option value="price-desc">السعر: من الأعلى</option>
-        </select>
-      </div>
+  const total = items.reduce((sum, p) => sum + p.price, 0);
 
-      {/* ── PRODUCTS GRID ───────────────────── */}
-      {/* Featured / Most Popular — show only on 'all' tab with no search */}
-      {activeTab === 'all' && !search && filtered.length > 0 && (() => {
-        const popular = [...filtered].sort((a,b)=>(b.sales||0)-(a.sales||0)).slice(0,3).filter(p=>(p.sales||0)>0);
-        if (popular.length < 2) return null;
-        return (
-          <div style={{ padding:'0 16px 16px' }}>
-            <div style={{ fontSize:12,fontWeight:800,color:'var(--ink3)',marginBottom:10,letterSpacing:'.06em' }}>🔥 الأكثر طلباً</div>
-            <div style={{ display:'flex',gap:10,overflowX:'auto',paddingBottom:4 }}>
-              {popular.map(p => (
-                <div key={p.id} onClick={()=>setViewProduct(p)}
-                  style={{ flexShrink:0,width:240,borderRadius:16,overflow:'hidden',cursor:'pointer',background:'var(--panel)',border:'1px solid rgba(255,106,0,.2)',boxShadow:'0 4px 20px rgba(255,106,0,.1)',transition:'all .2s' }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform='translateY(-3px)';(e.currentTarget as HTMLElement).style.borderColor='rgba(255,106,0,.5)';}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform='';(e.currentTarget as HTMLElement).style.borderColor='rgba(255,106,0,.2)';}}>
-                  <div style={{ height:120,position:'relative',background:p.imageUrl?'#000':'var(--void2)',overflow:'hidden' }}>
-                    {p.imageUrl ? <img src={p.imageUrl} alt={p.name} style={{ width:'100%',height:'100%',objectFit:'cover' }} loading="lazy"/> : <div style={{ width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:40 }}>{p.emoji||'📦'}</div>}
-                    <span style={{ position:'absolute',top:8,right:8,background:'rgba(255,106,0,.9)',color:'#fff',fontSize:9,fontWeight:800,padding:'3px 8px',borderRadius:99 }}>🔥 #{popular.indexOf(p)+1}</span>
-                  </div>
-                  <div style={{ padding:'10px 12px',display:'flex',justifyContent:'space-between',alignItems:'center' }}>
-                    <div>
-                      <div style={{ fontSize:12,fontWeight:800,color:'var(--ink1)' }}>{p.name}</div>
-                      <div style={{ fontSize:10,color:'var(--ink3)' }}>{p.sales||0} طلب</div>
-                    </div>
-                    <div style={{ fontSize:16,fontWeight:900,color:'var(--ember)' }}>{p.price.toLocaleString()} {cur}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
+  return (
+    <div className="fixed inset-0 z-[70]">
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+        style={{ animation: 'fadeIn 200ms ease' }}
+      />
+      <div
+        className="absolute left-0 top-0 bottom-0 w-[86%] max-w-md bg-[var(--panel)] border-r border-[var(--border2)] p-5 overflow-y-auto"
+        style={{
+          animation: 'slideRight 320ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+          boxShadow: 'var(--depth-shadow)',
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ShoppingCart size={18} className="text-white" />
+            <span className="text-sm font-semibold text-white">سلة المشتريات</span>
+            <span className="rounded-full bg-[var(--ember-soft)] px-2 py-0.5 text-[11px] text-[var(--ember2)]">
+              {items.length}
+            </span>
           </div>
-        );
-      })()}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white"
+            aria-label="إغلاق"
+          >
+            <X size={16} />
+          </button>
+        </div>
 
-      <div style={{ padding:'0 16px 120px',display:viewMode==='list'?'flex':'grid', flexDirection:viewMode==='list'?'column':'row', gridTemplateColumns:viewMode==='grid'?'repeat(auto-fill,minmax(140px,1fr))':'none', gap:viewMode==='list'?10:14 }}>
-        {filtered.map(p => (
-          <ProductCard key={p.id} p={p} currency={cur}
-            onAdd={handleAddToCart}
-            onView={setViewProduct}
-          />
-        ))}
-        {filtered.length === 0 && (
-          <div style={{ gridColumn:'1/-1',textAlign:'center',padding:'60px 20px',color:'var(--ink3)' }}>
-            <Package size={48} style={{ margin:'0 auto 16px',opacity:.3 }}/>
-            <div style={{ fontSize:16,fontWeight:700,marginBottom:8 }}>لم نجد منتجات</div>
-            <div style={{ fontSize:13 }}>جرب كلمة بحث أخرى</div>
+        <div className="mt-5 space-y-3">
+          {items.length === 0 && (
+            <div className="rounded-[1.3rem] border border-[var(--border)] bg-white/[0.03] p-8 text-center">
+              <p className="text-sm text-white/60">السلة فارغة — أضف منتجات للبدء.</p>
+            </div>
+          )}
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center gap-3 rounded-[1.15rem] border border-[var(--border)] bg-white/[0.03] p-3"
+            >
+              <div
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[0.9rem] border border-white/10 text-white"
+                style={{ background: `${item.accent}22` }}
+              >
+                <Package size={20} />
+              </div>
+              <div className="min-w-0 flex-1 text-right">
+                <p className="truncate text-sm font-semibold text-white">{item.name}</p>
+                <p className="text-xs text-white/55">{item.category}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-semibold text-[var(--ember2)]">{formatPrice(item.price)}</p>
+                <button
+                  type="button"
+                  onClick={() => onRemove(item.id)}
+                  className="mt-1 text-[11px] text-white/45 hover:text-[var(--ember2)]"
+                >
+                  إزالة
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {items.length > 0 && (
+          <div className="mt-5 rounded-[1.3rem] border border-[var(--border-ember)] bg-[var(--ember-soft)] p-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-white/70">المجموع</span>
+              <span className="text-lg font-bold text-[var(--ember2)]">{formatPrice(total)}</span>
+            </div>
+            <button type="button" className="cta-button mt-3 w-full justify-center">
+              إتمام الطلب
+            </button>
           </div>
         )}
       </div>
+    </div>
+  );
+}
 
-      {/* ── STICKY CART BUTTON ───────────────── */}
-      {cart.count > 0 && !showCart && (
-        <div style={{ position:'fixed',bottom:20,right:16,left:16,zIndex:150 }}>
-          <button onClick={()=>setShowCart(true)} style={{
-            width:'100%',height:52,background:'var(--ember)',border:'none',borderRadius:'var(--r)',
-            color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer',
-            display:'flex',alignItems:'center',justifyContent:'center',gap:10,
-            boxShadow:'0 8px 24px rgba(255,106,0,.45)',
-          }}>
-            <ShoppingCart size={18}/>
-            عرض السلة ({cart.count} منتج)
-            <span style={{ background:'rgba(255,255,255,.2)',borderRadius:99,padding:'2px 10px',fontSize:13 }}>
-              {cart.total.toLocaleString()} {cur}
-            </span>
+/* ═══════════════════════════════════════════════════
+   6. PRODUCT CARD — Glass floating with image zoom
+   ═══════════════════════════════════════════════════ */
+
+function ProductCard({ product, onBuy }: { product: Product; onBuy: (p: Product) => void }) {
+  return (
+    <article className="glass-card fade-up overflow-hidden">
+      <div
+        className="relative m-3 rounded-[1.35rem] border border-white/10 p-5"
+        style={{
+          background: `radial-gradient(circle at 15% 20%, ${product.glow}, transparent 34%), linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03))`,
+        }}
+      >
+        <div
+          className="absolute -left-6 top-3 h-24 w-24 rounded-full blur-3xl"
+          style={{ backgroundColor: product.glow }}
+        />
+        <div className="relative flex items-center justify-between">
+          <span className="rounded-full border border-white/10 bg-black/10 px-3 py-1 text-[11px] font-medium text-white/75 backdrop-blur-xl">
+            {product.tag}
+          </span>
+          <div
+            className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 text-white shadow-2xl"
+            style={{ backgroundColor: `${product.accent}33` }}
+          >
+            <Package size={22} />
+          </div>
+        </div>
+
+        <div className="relative mt-8 flex items-end justify-between">
+          <div>
+            <p className="text-xs text-white/55">{product.category}</p>
+            <p className="mt-2 text-lg font-semibold text-white">تصميم Premium</p>
+          </div>
+          <div className="relative h-20 w-20 rounded-[1.7rem] border border-white/15 bg-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] backdrop-blur-2xl transition duration-500 hover:-translate-y-1">
+            <div
+              className="absolute inset-3 rounded-[1.2rem]"
+              style={{ background: `linear-gradient(135deg, ${product.accent}, rgba(255,255,255,0.15))` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="px-5 pb-5 pt-2">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-base font-semibold text-white">{product.name}</h3>
+            <p className="mt-2 text-sm leading-6 text-white/60">{product.description}</p>
+          </div>
+          <div className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-white/70">
+            <Star size={14} className="text-amber-300" />
+            {product.rating.toFixed(1)}
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-end justify-between gap-3">
+          <div>
+            <p className="text-lg font-semibold tracking-tight text-white">{formatPrice(product.price)}</p>
+            <p className="text-sm text-white/35 line-through">{formatPrice(product.oldPrice)}</p>
+          </div>
+          <button type="button" className="cta-button justify-center whitespace-nowrap" onClick={() => onBuy(product)}>
+            اطلب الآن
+            <ChevronLeft size={16} />
           </button>
         </div>
-      )}
+      </div>
+    </article>
+  );
+}
 
-      {/* ── MODALS ──────────────────────────── */}
-      {viewProduct && <ProductModal p={viewProduct} cart={cart} onClose={()=>setViewProduct(null)} currency={cur} userId={userId}/>}
-      {showCart && <CartSidebar cart={cart} storeInfo={storeInfo!} userId={userId} onClose={()=>setShowCart(false)} onOrderSuccess={id=>{setSuccessOrderId(id);setShowCart(false)}}/>}
-      {showTrack && <TrackingModal userId={userId} storeInfo={storeInfo!} onClose={()=>setShowTrack(false)}/>}
-      <FloatingChat userId={userId} storeInfo={storeInfo!}/>
+/* ═══════════════════════════════════════════════════
+   7. SERVICE CARD — visually different from products
+   ═══════════════════════════════════════════════════ */
+
+function ServiceCard({ service }: { service: Service }) {
+  return (
+    <article className="glass-card fade-up p-5">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-start gap-4">
+          <div
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/15 text-white shadow-2xl"
+            style={{
+              background: `radial-gradient(circle at 30% 30%, ${service.glow}, transparent 55%), ${service.accent}33`,
+            }}
+          >
+            <Briefcase size={20} />
+          </div>
+
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-lg font-semibold text-white">{service.name}</h3>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-white/70">
+                {service.tag}
+              </span>
+            </div>
+            <p className="mt-2 max-w-2xl text-sm leading-7 text-white/60">{service.description}</p>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="meta-chip">
+                <Clock size={16} />
+                {service.duration}
+              </span>
+              <span className="meta-chip">
+                <MapPin size={16} />
+                {service.city}
+              </span>
+              <span className="meta-chip">
+                <Star size={16} className="text-amber-300" />
+                {service.rating.toFixed(1)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex min-w-[220px] flex-col items-start gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4 lg:items-end">
+          <p className="text-sm text-white/45">سعر الخدمة</p>
+          <p className="text-xl font-semibold tracking-tight text-white">{service.price}</p>
+          <button type="button" className="cta-button w-full justify-center lg:w-auto">
+            اطلب الخدمة
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   8. SECTION HEADER — eyebrow pattern
+   ═══════════════════════════════════════════════════ */
+
+function SectionHeader({
+  eyebrow,
+  title,
+  subtitle,
+  action,
+}: {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  action?: string;
+}) {
+  return (
+    <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p className="mb-2 text-[11px] font-semibold tracking-[0.28em] text-white/45 uppercase">
+          {eyebrow}
+        </p>
+        <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{title}</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-7 text-white/62 sm:text-[15px]">{subtitle}</p>
+      </div>
+      {action ? (
+        <div className="hidden rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/55 backdrop-blur-xl sm:block">
+          {action}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   9. MAIN — Storefront
+   ═══════════════════════════════════════════════════ */
+
+export default function Storefront() {
+  const [query, setQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'products' | 'services'>('products');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [cart, setCart] = useState<Product[]>([]);
+
+  const normalizedQuery = query.trim().toLowerCase();
+
+  const filteredProducts = useMemo(() => {
+    if (!normalizedQuery) return products;
+    return products.filter((product) =>
+      [product.name, product.category, product.description, product.tag]
+        .join(' ')
+        .toLowerCase()
+        .includes(normalizedQuery)
+    );
+  }, [normalizedQuery]);
+
+  const filteredServices = useMemo(() => {
+    if (!normalizedQuery) return services;
+    return services.filter((service) =>
+      [service.name, service.city, service.description, service.tag]
+        .join(' ')
+        .toLowerCase()
+        .includes(normalizedQuery)
+    );
+  }, [normalizedQuery]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        const el = document.getElementById('sf-search');
+        el?.focus();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  const scrollToSection = (section: string, tab?: 'products' | 'services') => {
+    if (tab) setActiveTab(tab);
+    setMenuOpen(false);
+    const el = document.getElementById(section);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const addToCart = (p: Product) => {
+    setCart((prev) => (prev.find((x) => x.id === p.id) ? prev : [...prev, p]));
+    setCartOpen(true);
+  };
+
+  const removeFromCart = (id: number) => {
+    setCart((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  return (
+    <div className="relative min-h-screen overflow-hidden text-white">
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="hero-orb hero-orb-1" />
+        <div className="hero-orb hero-orb-2" />
+        <div className="hero-orb hero-orb-3" />
+        <div className="grid-overlay" />
+      </div>
+
+      <TopNav
+        query={query}
+        setQuery={setQuery}
+        onOpenCart={() => setCartOpen(true)}
+        cartCount={cart.length}
+        onMenu={() => setMenuOpen(true)}
+      />
+
+      <MobileMenu
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        onNavigate={scrollToSection}
+        activeTab={activeTab}
+      />
+
+      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} items={cart} onRemove={removeFromCart} />
+
+      <main className="relative mx-auto max-w-7xl px-4 pb-28 pt-28 sm:px-6 lg:px-8 lg:pb-16 lg:pt-32">
+        {/* HERO */}
+        <section id="hero" className="scroll-mt-28">
+          <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-stretch">
+            <div className="glass-card hero-panel fade-up overflow-hidden px-5 py-7 sm:px-8 sm:py-8">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/65 backdrop-blur-xl">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.95)]" />
+                واجهة بيع حديثة، سريعة، وواضحة للمستخدم
+              </div>
+
+              <div className="mt-6 max-w-3xl">
+                <h2 className="text-4xl font-semibold leading-[1.15] tracking-tight text-white sm:text-5xl xl:text-6xl">
+                  متجر زجاجي عصري يرفع
+                  <span className="block text-white/75">الوضوح، الثقة، والتحويل.</span>
+                </h2>
+                <p className="mt-5 max-w-2xl text-sm leading-8 text-white/62 sm:text-base">
+                  فصل بصري واضح بين المنتجات والخدمات، بحث مباشر، أزرار شراء احترافية، وحركة خفيفة
+                  جدًا تحافظ على الإحساس الفاخر بدون إزعاج أو تشويش.
+                </p>
+              </div>
+
+              <div className="hero-search mt-7">
+                <Search size={20} className="text-white/40" />
+                <input
+                  id="sf-search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="مثال: سماعات، كهربائي، الرباط، توصيل سريع..."
+                  aria-label="ابحث في المتجر والخدمات"
+                />
+                <button
+                  type="button"
+                  className="cta-button justify-center whitespace-nowrap"
+                  onClick={() =>
+                    scrollToSection(activeTab === 'products' ? 'products' : 'services', activeTab)
+                  }
+                >
+                  ابدأ الآن
+                </button>
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  className="cta-button"
+                  onClick={() => scrollToSection('products', 'products')}
+                >
+                  تسوق المنتجات
+                  <ArrowLeft size={16} />
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => scrollToSection('services', 'services')}
+                >
+                  اطلب خدمة محترفة
+                </button>
+              </div>
+
+              <div className="mt-8 grid gap-3 sm:grid-cols-3">
+                {[
+                  { value: '24h', label: 'استجابة أسرع للطلبات' },
+                  { value: '+12k', label: 'زائر شهري بتجربة أوضح' },
+                  { value: '4.9/5', label: 'متوسط رضا العملاء' },
+                ].map((item, index) => (
+                  <div
+                    key={item.label}
+                    className="metric-panel fade-up"
+                    style={{ animationDelay: `${index * 120}ms` }}
+                  >
+                    <p className="text-2xl font-semibold tracking-tight text-white">{item.value}</p>
+                    <p className="mt-2 text-sm leading-6 text-white/55">{item.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <aside className="grid gap-4">
+              <div className="glass-card fade-up overflow-hidden p-5 sm:p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.28em] text-white/45">Spotlight</p>
+                    <h3 className="mt-3 text-2xl font-semibold text-white">لوحة واجهة عالية التحويل</h3>
+                    <p className="mt-3 text-sm leading-7 text-white/60">
+                      توزيع مرئي ذكي: CTA واضح، بطاقات عائمة، وثقة أسرع من أول نظرة.
+                    </p>
+                  </div>
+                  <div className="icon-shell text-cyan-300">
+                    <TrendingUp size={20} />
+                  </div>
+                </div>
+
+                <div className="mt-6 rounded-[1.6rem] border border-white/10 bg-[linear-gradient(135deg,rgba(124,111,250,0.18),rgba(255,255,255,0.05))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-white/65">أفضل مسار شراء</span>
+                    <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs text-white/70">
+                      1 Click Flow
+                    </span>
+                  </div>
+                  <div className="mt-5 flex items-center gap-3 text-sm text-white/60">
+                    <span className="step-pill">Search</span>
+                    <ArrowLeft size={16} className="text-white/30" />
+                    <span className="step-pill">Category</span>
+                    <ArrowLeft size={16} className="text-white/30" />
+                    <span className="step-pill">Buy</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                <div className="glass-card fade-up p-5" style={{ animationDelay: '120ms' }}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-white/50">المنتجات الجاهزة</p>
+                      <p className="mt-2 text-3xl font-semibold tracking-tight text-white">
+                        {filteredProducts.length}
+                      </p>
+                    </div>
+                    <div className="icon-shell text-violet-300">
+                      <Package size={20} />
+                    </div>
+                  </div>
+                  <p className="mt-4 text-sm leading-6 text-white/60">
+                    بطاقات أكثر وضوحًا مع إبراز السعر والقرار الشرائي.
+                  </p>
+                </div>
+
+                <div className="glass-card fade-up p-5" style={{ animationDelay: '180ms' }}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-white/50">الخدمات الموثوقة</p>
+                      <p className="mt-2 text-3xl font-semibold tracking-tight text-white">
+                        {filteredServices.length}
+                      </p>
+                    </div>
+                    <div className="icon-shell text-emerald-300">
+                      <Briefcase size={20} />
+                    </div>
+                  </div>
+                  <p className="mt-4 text-sm leading-6 text-white/60">
+                    فصل بصري يمنع الخلط بين الخدمة والمنتج ويحسن الفهم السريع.
+                  </p>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        {/* QUICK ACCESS */}
+        <section className="scroll-mt-28 pt-10 sm:pt-14">
+          <div className="glass-card fade-up p-4 sm:p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/45">Quick Access</p>
+                <h3 className="mt-2 text-xl font-semibold text-white">اختر مسارك بسرعة بدون ازدحام</h3>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[430px] lg:flex-1">
+                <button
+                  type="button"
+                  aria-pressed={activeTab === 'products'}
+                  onClick={() => scrollToSection('products', 'products')}
+                  className={cn(
+                    'quick-switch text-right',
+                    activeTab === 'products' && 'quick-switch-active'
+                  )}
+                >
+                  <span className="icon-shell text-violet-300">
+                    <Package size={20} />
+                  </span>
+                  <span className="flex-1">
+                    <span className="block text-sm font-semibold text-white">المنتجات</span>
+                    <span className="mt-1 block text-xs leading-6 text-white/55">
+                      عناصر جاهزة للشراء مع عرض السعر والخصم بشكل واضح
+                    </span>
+                  </span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                    {filteredProducts.length}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  aria-pressed={activeTab === 'services'}
+                  onClick={() => scrollToSection('services', 'services')}
+                  className={cn(
+                    'quick-switch text-right',
+                    activeTab === 'services' && 'quick-switch-active'
+                  )}
+                >
+                  <span className="icon-shell text-emerald-300">
+                    <Briefcase size={20} />
+                  </span>
+                  <span className="flex-1">
+                    <span className="block text-sm font-semibold text-white">الخدمات</span>
+                    <span className="mt-1 block text-xs leading-6 text-white/55">
+                      مختصون جاهزون مع وقت تنفيذ وموقع وتقييم في بطاقة واحدة
+                    </span>
+                  </span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                    {filteredServices.length}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* PRODUCTS */}
+        <section id="products" className="scroll-mt-28 pt-12 sm:pt-16">
+          <SectionHeader
+            eyebrow="Featured Products"
+            title="منتجات مختارة بعرض أوضح للشراء"
+            subtitle="بطاقات زجاجية نظيفة، صورة بصرية راقية، سعر واضح، وزر شراء مباشر بدون فوضى أو عناصر مشتتة."
+            action={`${filteredProducts.length} نتيجة متاحة`}
+          />
+
+          {filteredProducts.length ? (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {filteredProducts.map((product) => (
+                <ProductCard key={product.id} product={product} onBuy={addToCart} />
+              ))}
+            </div>
+          ) : (
+            <div className="glass-card fade-up empty-state p-8 sm:p-10">
+              <div className="icon-shell mx-auto text-cyan-300">
+                <Search size={20} />
+              </div>
+              <h3 className="mt-4 text-xl font-semibold text-white">لا توجد منتجات مطابقة</h3>
+              <p className="mt-2 text-sm leading-7 text-white/60">
+                جرّب كلمة بحث أخرى أو انتقل إلى قسم الخدمات لإيجاد البديل المناسب.
+              </p>
+            </div>
+          )}
+        </section>
+
+        {/* SERVICES */}
+        <section id="services" className="scroll-mt-28 pt-12 sm:pt-16">
+          <SectionHeader
+            eyebrow="Featured Services"
+            title="خدمات مفصولة بصريًا لتسهيل القرار"
+            subtitle="كل بطاقة خدمة تعرض ما يحتاجه المستخدم فورًا: نوع الخدمة، مدة التنفيذ، المدينة، التقييم، وزر الطلب المباشر."
+            action={`${filteredServices.length} خدمة فعالة`}
+          />
+
+          <div className="grid gap-4">
+            {filteredServices.length ? (
+              filteredServices.map((service) => <ServiceCard key={service.id} service={service} />)
+            ) : (
+              <div className="glass-card fade-up empty-state p-8 sm:p-10">
+                <div className="icon-shell mx-auto text-emerald-300">
+                  <Search size={20} />
+                </div>
+                <h3 className="mt-4 text-xl font-semibold text-white">لا توجد خدمات مطابقة</h3>
+                <p className="mt-2 text-sm leading-7 text-white/60">
+                  غيّر عبارة البحث أو راجع المنتجات الجاهزة، وقد تجد ما يناسبك بشكل أسرع.
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* TRENDING */}
+        <section className="pt-12 sm:pt-16">
+          <SectionHeader
+            eyebrow="Trending Now"
+            title="ما الذي يدفع التحويل الآن؟"
+            subtitle="اتجاهات حية مصممة لزيادة الوضوح والثقة: اقتراح ذكي، إبراز العناصر الصاعدة، وتقوية إشارات الموثوقية."
+          />
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            {[
+              {
+                title: 'اقتراحات ذكية حسب البحث',
+                subtitle:
+                  'المنتجات والخدمات الأكثر توافقًا مع نية الشراء الحالية.',
+                badge: '+28% تحويل',
+                accent: 'from-cyan-400/30 to-sky-500/10',
+                icon: <Sparkles size={20} />,
+              },
+              {
+                title: 'أكثر ما يصعد هذا الأسبوع',
+                subtitle:
+                  'سماعات Echo Pro وخدمة التوصيل السريع يقودان الطلب الآن.',
+                badge: 'Trending',
+                accent: 'from-violet-400/30 to-fuchsia-500/10',
+                icon: <TrendingUp size={20} />,
+              },
+              {
+                title: 'عناصر موثوقة ومحققة',
+                subtitle:
+                  'خيارات مختارة بناءً على التقييمات، الاستجابة، وسرعة التنفيذ.',
+                badge: 'Verified',
+                accent: 'from-emerald-400/30 to-teal-500/10',
+                icon: <Shield size={20} />,
+              },
+            ].map((item, index) => (
+              <article
+                key={item.title}
+                className="glass-card fade-up overflow-hidden p-5"
+                style={{ animationDelay: `${index * 120}ms` }}
+              >
+                <div
+                  className={cn(
+                    'rounded-[1.35rem] border border-white/10 bg-gradient-to-br p-4',
+                    item.accent
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="icon-shell text-white">{item.icon}</div>
+                    <span className="rounded-full border border-white/10 bg-black/10 px-3 py-1 text-[11px] text-white/75">
+                      {item.badge}
+                    </span>
+                  </div>
+                  <h3 className="mt-6 text-lg font-semibold text-white">{item.title}</h3>
+                  <p className="mt-3 text-sm leading-7 text-white/70">{item.subtitle}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* OFFERS */}
+        <section id="offers" className="scroll-mt-28 pt-12 sm:pt-16">
+          <SectionHeader
+            eyebrow="Offers & Discounts"
+            title="عروض جاهزة لدفع القرار بسرعة"
+            subtitle="مساحات ترويجية واضحة، أنيقة، ومناسبة لتحسين النقر والتحويل دون تشويش بصري أو ازدحام لوني."
+          />
+
+          <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+            <article className="glass-card fade-up overflow-hidden p-6 sm:p-7">
+              <div className="rounded-[1.8rem] border border-white/10 bg-[linear-gradient(135deg,rgba(255,128,0,0.22),rgba(255,255,255,0.05))] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] sm:p-8">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs text-white/80">
+                    Limited Offer
+                  </span>
+                  <span className="rounded-full border border-orange-300/20 bg-orange-400/10 px-3 py-1 text-xs text-orange-100">
+                    تحويل أعلى
+                  </span>
+                </div>
+                <h3 className="mt-5 max-w-2xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+                  خصم 15% على أول طلب
+                </h3>
+                <p className="mt-4 max-w-2xl text-sm leading-8 text-white/72 sm:text-base">
+                  فعّل تجربة الشراء أو الخدمة الأولى مع مزايا شحن أسرع ودعم مباشر.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <button type="button" className="cta-button">
+                    استخدم الكود SAHAR15
+                  </button>
+                  <button type="button" className="secondary-button">
+                    استكشف المزيد
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <div className="grid gap-4">
+              {[
+                {
+                  title: 'باقة المنزل الذكي',
+                  subtitle: 'اشترِ مصباح Aura + تركيب خلال 48 ساعة.',
+                  cta: 'عرض مركب',
+                  accent: 'from-sky-500/20 to-cyan-400/10',
+                },
+                {
+                  title: 'خدمة عاجلة للشركات',
+                  subtitle: 'استجابة أسرع ودعم مخصص للأعمال الناشئة.',
+                  cta: 'احجز أولوية',
+                  accent: 'from-violet-500/20 to-indigo-400/10',
+                },
+              ].map((offer, index) => (
+                <article
+                  key={offer.title}
+                  className="glass-card fade-up p-5"
+                  style={{ animationDelay: `${index * 120}ms` }}
+                >
+                  <div className={cn('rounded-[1.35rem] border border-white/10 bg-gradient-to-br p-5', offer.accent)}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="icon-shell text-white">
+                        <Tag size={20} />
+                      </div>
+                      <span className="rounded-full border border-white/10 bg-black/10 px-3 py-1 text-[11px] text-white/75">
+                        Offer
+                      </span>
+                    </div>
+                    <h3 className="mt-5 text-lg font-semibold text-white">{offer.title}</h3>
+                    <p className="mt-3 text-sm leading-7 text-white/70">{offer.subtitle}</p>
+                    <button type="button" className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-white/85 transition hover:text-white">
+                      {offer.cta}
+                      <ArrowLeft size={16} />
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* TRUST */}
+        <section id="trust" className="scroll-mt-28 pt-12 sm:pt-16">
+          <SectionHeader
+            eyebrow="Store Highlights"
+            title="عناصر الثقة التي يجب أن تظهر دائمًا"
+            subtitle="هذه الطبقة مهمة جدًا في أي واجهة بيع احترافية: توصيل، أمان، تحقق، ومساندة واضحة للمستخدم."
+          />
+
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              { title: 'دفع آمن', subtitle: 'حماية عالية للمدفوعات والبيانات', icon: <Shield size={20} /> },
+              { title: 'توصيل سريع', subtitle: 'تنفيذ وشحن بوضوح كامل', icon: <Truck size={20} /> },
+              { title: 'بائعون موثقون', subtitle: 'تقييمات حقيقية وخيارات مختارة', icon: <CheckCircle2 size={20} /> },
+              { title: 'دعم مباشر', subtitle: 'مساعدة سريعة قبل وبعد الطلب', icon: <Headphones size={20} /> },
+            ].map((item, index) => (
+              <article
+                key={item.title}
+                className="glass-card fade-up p-5 text-center"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <div className="icon-shell mx-auto text-cyan-300">{item.icon}</div>
+                <h3 className="mt-4 text-lg font-semibold text-white">{item.title}</h3>
+                <p className="mt-2 text-sm leading-7 text-white/58">{item.subtitle}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* FOOTER MINI */}
+        <footer id="footer" className="scroll-mt-28 pt-12 sm:pt-16">
+          <div className="glass-card fade-up overflow-hidden p-6 sm:p-8">
+            <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.28em] text-white/45">Mini Footer</p>
+                <h3 className="mt-3 text-2xl font-semibold text-white">
+                  SAHAR SHOP — واجهة أنظف، قرار أسرع، وثقة أعلى.
+                </h3>
+                <p className="mt-3 max-w-2xl text-sm leading-8 text-white/60">
+                  تم تحسين الصفحة الرئيسية بالكامل مع تصميم زجاجي احترافي، توزيع واضح، ظلال ناعمة،
+                  إضاءات دقيقة، وتجربة سلسة على الموبايل والديسكتوب بدون كسر أي جزء أساسي من الواجهة.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-3 lg:justify-end">
+                <button
+                  type="button"
+                  className="cta-button"
+                  onClick={() => scrollToSection('products', 'products')}
+                >
+                  ابدأ التسوق
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => scrollToSection('services', 'services')}
+                >
+                  اطلب خدمة
+                </button>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </main>
+
+      {/* MOBILE BOTTOM NAV */}
+      <nav className="mobile-nav lg:hidden">
+        {[
+          { id: 'hero', label: 'الرئيسية', icon: <Sparkles size={20} /> },
+          { id: 'products', label: 'منتجات', icon: <Package size={20} /> },
+          { id: 'services', label: 'خدمات', icon: <Briefcase size={20} /> },
+          { id: 'offers', label: 'عروض', icon: <Tag size={20} /> },
+          { id: 'footer', label: 'المزيد', icon: <Shield size={20} /> },
+        ].map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => scrollToSection(item.id)}
+            className="flex min-w-[64px] flex-col items-center gap-1 rounded-2xl px-3 py-2 text-[11px] font-medium text-white/45 transition duration-300 hover:text-white"
+          >
+            <span className="transition">{item.icon}</span>
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }
